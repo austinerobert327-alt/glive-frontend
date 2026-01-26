@@ -1,0 +1,20 @@
+/* Single share section at bottom */
+.share-section {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.share-section .share-label {
+  font-size: 16px;
+  color: #aaa;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.share-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
