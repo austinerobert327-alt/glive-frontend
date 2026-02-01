@@ -2,7 +2,7 @@ import './App.css';
 import { FacebookShareButton, FacebookIcon, WhatsappShareButton, WhatsappIcon } from 'react-share';
 
 function App() {
-  const websiteUrl = "https://yourglivewebsite.com"; // replace with your live website URL
+  const websiteUrl = "https://glive-frontend-4yxja7eix-okoro-augustines-projects.vercel.app/";
 
   const churches = [
     { name: "RCCG Live", url: "https://www.youtube.com/@rccglive/streams" },
@@ -46,7 +46,6 @@ function App() {
         ))}
       </div>
 
-      {/* SINGLE SHARE SECTION */}
       <div className="share-section">
         <span className="share-label">Share GLive:</span>
         <div className="share-buttons">
