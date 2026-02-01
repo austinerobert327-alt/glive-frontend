@@ -17,15 +17,18 @@ function App() {
 
   return (
     <div className="container">
-      <header>
-        <h1>GLive</h1>
-        <p>Nigerian Christian Live Services</p>
-      </header>
 
-      <h2>Live Church Services</h2>
-      <div className="church-list">
+      {/* HERO SECTION */}
+      <section className="hero">
+        <h1>GLive</h1>
+        <p>Watch Nigerian Christian Services & Devotions Live</p>
+      </section>
+
+      <h2 className="section-title">🔴 Live Church Services</h2>
+      <div className="card-grid">
         {churches.map((church) => (
-          <div key={church.name} className="church-card">
+          <div key={church.name} className="card">
+            <span className="live-badge">LIVE</span>
             <h3>{church.name}</h3>
             <a href={church.url} target="_blank" rel="noreferrer">
               Watch Now
@@ -34,10 +37,10 @@ function App() {
         ))}
       </div>
 
-      <h2>Morning Devotion</h2>
-      <div className="church-list">
+      <h2 className="section-title">☀ Morning Devotion</h2>
+      <div className="card-grid">
         {devotions.map((devotion) => (
-          <div key={devotion.name} className="church-card">
+          <div key={devotion.name} className="card">
             <h3>{devotion.name}</h3>
             <a href={devotion.url} target="_blank" rel="noreferrer">
               Watch Devotion
@@ -47,17 +50,17 @@ function App() {
       </div>
 
       <div className="share-section">
-        <span className="share-label">Share GLive:</span>
+        <span>Share GLive:</span>
         <div className="share-buttons">
-          <WhatsappShareButton url={websiteUrl} title="Check out GLive - Nigerian Christian Live Services">
+          <WhatsappShareButton url={websiteUrl}>
             <WhatsappIcon size={40} round />
           </WhatsappShareButton>
-
-          <FacebookShareButton url={websiteUrl} quote="Check out GLive - Nigerian Christian Live Services">
+          <FacebookShareButton url={websiteUrl}>
             <FacebookIcon size={40} round />
           </FacebookShareButton>
         </div>
       </div>
+
     </div>
   );
 }
