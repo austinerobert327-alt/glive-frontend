@@ -49,13 +49,14 @@ function App() {
         ))}
       </div>
 
+      {/* SHARE SECTION */}
       <div className="share-section">
         <span>Share GLive:</span>
         <div className="share-buttons">
-          <WhatsappShareButton url={websiteUrl}>
+          <WhatsappShareButton url={websiteUrl} title="Check out GLive - Nigerian Christian Live Services">
             <WhatsappIcon size={40} round />
           </WhatsappShareButton>
-          <FacebookShareButton url={websiteUrl}>
+          <FacebookShareButton url={websiteUrl} quote="Check out GLive - Nigerian Christian Live Services">
             <FacebookIcon size={40} round />
           </FacebookShareButton>
         </div>
