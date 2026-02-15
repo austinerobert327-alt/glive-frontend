@@ -53,6 +53,7 @@ body {
   width: 250px;
   position: relative;
   transition: transform 0.2s, box-shadow 0.2s;
+  text-align: center;
 }
 
 .card:hover {
@@ -61,8 +62,23 @@ body {
 }
 
 .card h3 {
-  margin: 0;
+  margin: 10px 0 5px 0;
   font-size: 1.2rem;
+}
+
+/* CARD IMAGE */
+.card-image {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+/* COUNTDOWN */
+.countdown {
+  margin-top: 10px;
+  font-size: 1rem;
+  color: #ffcc00;
+  font-weight: bold;
 }
 
 /* ACTIVE LIVE CARD */
@@ -112,8 +128,6 @@ button:hover {
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  padding: 10px;
-  /* extra padding for small screens */
 }
 
 /* MODAL CONTENT */
@@ -145,13 +159,19 @@ button:hover {
 .donate-btn {
   background: red;
   color: white;
+  padding: 10px 20px;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.donate-btn:hover {
+  opacity: 0.9;
 }
 
 /* RESPONSIVE VIDEO */
 iframe {
   border-radius: 10px;
-  width: 100%;
-  max-height: 500px;
 }
 
 /* MOBILE OPTIMIZATION */
@@ -161,12 +181,11 @@ iframe {
   }
 
   .modal-content {
-    width: 100%;
-    max-width: 100%;
+    width: 95%;
   }
 
   iframe {
-    height: 300px;
+    height: 250px;
   }
 
   .card {
