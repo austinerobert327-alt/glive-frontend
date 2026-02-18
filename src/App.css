@@ -35,6 +35,7 @@ body {
 .section-title {
   margin: 40px 0 20px;
   font-size: 1.5rem;
+  color: gold;
 }
 
 /* CARDS GRID */
@@ -42,55 +43,67 @@ body {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 20px;
+  gap: 25px;
 }
 
 /* CARD */
 .card {
   background: #1a1a1a;
   padding: 20px;
-  border-radius: 10px;
-  width: 250px;
+  border-radius: 15px;
+  width: 260px;
   position: relative;
   transition: transform 0.2s, box-shadow 0.2s;
-  text-align: center;
 }
 
 .card:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 15px gold;
+  box-shadow: 0 0 20px gold;
 }
 
 .card h3 {
-  margin: 10px 0 5px 0;
+  margin: 10px 0;
   font-size: 1.2rem;
 }
 
-/* CARD IMAGE */
-.card-image {
+/* Pastor Image */
+.pastor-img {
   width: 100%;
-  border-radius: 8px;
-  margin-bottom: 10px;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
 }
 
-/* COUNTDOWN */
+/* Live Time */
+.live-time {
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-top: 5px;
+}
+
+/* Countdown Timer */
 .countdown {
-  margin-top: 10px;
-  font-size: 1rem;
-  color: #ffcc00;
+  margin-top: 8px;
+  font-size: 0.95rem;
   font-weight: bold;
+  color: orange;
 }
 
 /* ACTIVE LIVE CARD */
 .active-live {
   border: 2px solid gold;
-  box-shadow: 0 0 20px gold;
+  box-shadow: 0 0 25px gold;
+}
+
+/* OFFLINE CARD */
+.offline {
+  opacity: 0.7;
 }
 
 /* BUTTONS */
 button {
   display: inline-block;
-  margin-top: 10px;
+  margin-top: 12px;
   padding: 10px 15px;
   background: gold;
   color: black;
@@ -98,10 +111,18 @@ button {
   border-radius: 5px;
   font-weight: bold;
   cursor: pointer;
+  width: 100%;
+  transition: 0.2s ease;
 }
 
 button:hover {
   opacity: 0.9;
+}
+
+button:disabled {
+  background: gray;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* LIVE BADGE */
@@ -114,6 +135,36 @@ button:hover {
   padding: 4px 8px;
   font-size: 0.7rem;
   border-radius: 4px;
+  font-weight: bold;
+  animation: pulse 1.2s infinite;
+}
+
+/* OFFLINE BADGE */
+.offline-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: gray;
+  color: white;
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+/* Pulse animation for LIVE */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0px red;
+  }
+
+  50% {
+    box-shadow: 0 0 15px red;
+  }
+
+  100% {
+    box-shadow: 0 0 0px red;
+  }
 }
 
 /* MODAL OVERLAY */
@@ -123,21 +174,23 @@ button:hover {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.9);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 10px;
 }
 
 /* MODAL CONTENT */
 .modal-content {
   background: #111;
   padding: 20px;
-  width: 95%;
+  width: 100%;
   max-width: 900px;
-  border-radius: 12px;
+  border-radius: 15px;
   position: relative;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 /* CLOSE BUTTON */
@@ -159,19 +212,13 @@ button:hover {
 .donate-btn {
   background: red;
   color: white;
-  padding: 10px 20px;
-  font-weight: bold;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.donate-btn:hover {
-  opacity: 0.9;
 }
 
 /* RESPONSIVE VIDEO */
 iframe {
   border-radius: 10px;
+  width: 100%;
+  height: 450px;
 }
 
 /* MOBILE OPTIMIZATION */
@@ -180,15 +227,24 @@ iframe {
     font-size: 2.2rem;
   }
 
-  .modal-content {
-    width: 95%;
-  }
-
   iframe {
     height: 250px;
   }
 
   .card {
     width: 90%;
+  }
+}
+
+/* FADE ANIMATION */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }

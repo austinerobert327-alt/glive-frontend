@@ -1,68 +1,201 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
+/* GENERAL */
 body {
   margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #0d0d0d;
+  color: white;
+}
+
+.container {
+  text-align: center;
+  padding: 20px;
+}
+
+/* HERO SECTION */
+.hero {
+  background: linear-gradient(135deg, #1a1a1a, #000000);
+  padding: 60px 20px;
+  border-radius: 10px;
+  margin-bottom: 40px;
+}
+
+.hero h1 {
+  font-size: 3rem;
+  margin: 0;
+  color: gold;
+}
+
+.hero p {
+  margin-top: 10px;
+  font-size: 1.2rem;
+  color: #ccc;
+}
+
+/* SECTION TITLES */
+.section-title {
+  margin: 40px 0 20px;
+  font-size: 1.5rem;
+  color: gold;
+}
+
+/* CARDS GRID */
+.card-grid {
   display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 25px;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* CARD */
+.card {
+  background: #1a1a1a;
+  padding: 20px;
+  border-radius: 15px;
+  width: 260px;
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
+.card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px gold;
+}
+
+.card h3 {
+  margin: 10px 0;
+  font-size: 1.2rem;
+}
+
+/* Pastor Image */
+.pastor-img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+/* Live Time */
+.live-time {
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-top: 5px;
+}
+
+/* ACTIVE LIVE CARD */
+.active-live {
+  border: 2px solid gold;
+  box-shadow: 0 0 25px gold;
+}
+
+/* BUTTONS */
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  display: inline-block;
+  margin-top: 12px;
+  padding: 10px 15px;
+  background: gold;
+  color: black;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  width: 100%;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+button:hover {
+  opacity: 0.9;
+}
+
+/* LIVE BADGE */
+.live-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: red;
+  color: white;
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+/* MODAL OVERLAY */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 10px;
+}
+
+/* MODAL CONTENT */
+.modal-content {
+  background: #111;
+  padding: 20px;
+  width: 100%;
+  max-width: 900px;
+  border-radius: 15px;
+  position: relative;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* CLOSE BUTTON */
+.close {
+  position: absolute;
+  right: 15px;
+  top: 10px;
+  font-size: 28px;
+  cursor: pointer;
+  color: white;
+}
+
+/* DONATION SECTION */
+.donation {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.donate-btn {
+  background: red;
+  color: white;
+}
+
+/* RESPONSIVE VIDEO */
+iframe {
+  border-radius: 10px;
+  width: 100%;
+  height: 450px;
+}
+
+/* MOBILE OPTIMIZATION */
+@media (max-width: 768px) {
+  .hero h1 {
+    font-size: 2.2rem;
   }
-  a:hover {
-    color: #747bff;
+
+  iframe {
+    height: 250px;
   }
-  button {
-    background-color: #f9f9f9;
+
+  .card {
+    width: 90%;
+  }
+}
+
+/* FADE ANIMATION */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
