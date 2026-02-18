@@ -1,89 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import "./App.css";
 import jerryImage from "./assets/jerry.jpg";
 
+// ✅ Official Pastor Jerry Eze Channel ID
+const CHANNEL_ID = "UC8M9xAqK0eQ7bQ8fEzeNSPPD";
+
 function App() {
-  const [activeVideo, setActiveVideo] = useState(null);
-  const [isLive, setIsLive] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(null);
-
-  // 🔴 SET DAILY LIVE TIME (7:00 AM WAT)
-  const getNextLiveTime = () => {
-    const now = new Date();
-
-    // WAT is UTC+1
-    const liveTime = new Date();
-    liveTime.setUTCHours(6, 0, 0, 0); // 6:00 UTC = 7:00 AM WAT
-
-    // If already past today’s live time, set for tomorrow
-    if (now > liveTime) {
-      liveTime.setUTCDate(liveTime.getUTCDate() + 1);
-    }
-
-    return liveTime;
-  };
-
-  const [liveStartTime, setLiveStartTime] = useState(getNextLiveTime());
-
-  // 🔴 Replace with real live ID when stream starts
-  const liveVideoId = "REPLACE_WITH_LIVE_VIDEO_ID";
-
-  // Countdown + Auto Live Logic
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      const difference = liveStartTime - now;
-
-      if (difference <= 0) {
-        setIsLive(true);
-        setTimeLeft(null);
-      } else {
-        setIsLive(false);
-        setTimeLeft(difference);
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [liveStartTime]);
-
-  const formatTime = (ms) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  };
-
-  const churches = [
-    {
-      name: "NSPPD Live",
-      videoId: liveVideoId,
-      isLive: isLive,
-      pastor: "Pastor Jerry Eze",
-      time: "7:00 AM (WAT)",
-      image: jerryImage,
-    },
-    {
-      name: "RCCG Live",
-      videoId: "dQw4w9WgXcQ",
-      isLive: false,
-    },
-  ];
-
-  const openModal = (videoId) => {
-    if (isLive) {
-      setActiveVideo(videoId);
-    }
-  };
-
-  const closeModal = () => {
-    setActiveVideo(null);
-  };
-
-  const sortedChurches = [...churches].sort((a, b) => b.isLive - a.isLive);
+  const [showModal, setShowModal] = useState(false);
 
   return (
     <div className="container">
@@ -92,62 +15,52 @@ function App() {
         <p>Watch Nigerian Christian Services & Devotions Live</p>
       </section>
 
-      <h2 className="section-title">🔴 Live Now</h2>
+      <h2 className="section-title">🔴 NSPPD Live</h2>
 
       <div className="card-grid">
-        {sortedChurches.map((church) => (
-          <div
-            key={church.name}
-            className={`card ${church.isLive ? "active-live" : ""}`}
+        <div className="card active-live">
+          <span className="live-badge">LIVE</span>
+
+          <img
+            src={jerryImage}
+            alt="Pastor Jerry Eze"
+            className="pastor-img"
+          />
+
+          <h3>NSPPD Live Prayer</h3>
+          <p>Pastor Jerry Eze</p>
+          <p className="live-time">⏰ 7:00 AM (WAT)</p>
+
+          <button onClick={() => setShowModal(true)}>
+            Watch Now
+          </button>
+
+          <a
+            href="https://www.youtube.com/@pastorjerryeze/live"
+            target="_blank"
+            rel="noopener noreferrer"
           >
-            {church.isLive && <span className="live-badge">LIVE</span>}
-
-            {church.image && (
-              <img
-                src={church.image}
-                alt={church.pastor}
-                className="pastor-img"
-              />
-            )}
-
-            <h3>{church.name}</h3>
-
-            {church.pastor && <p>{church.pastor}</p>}
-
-            {church.time && (
-              <p className="live-time">⏰ {church.time}</p>
-            )}
-
-            {/* COUNTDOWN BEFORE LIVE */}
-            {!church.isLive && church.name === "NSPPD Live" && timeLeft && (
-              <p className="countdown">
-                ⏳ Starts in: {formatTime(timeLeft)}
-              </p>
-            )}
-
-            {/* WATCH BUTTON ONLY WHEN LIVE */}
-            {church.isLive && (
-              <button onClick={() => openModal(church.videoId)}>
-                Watch Now
-              </button>
-            )}
-          </div>
-        ))}
+            <button className="youtube-btn">
+              Watch on YouTube
+            </button>
+          </a>
+        </div>
       </div>
 
-      {/* Modal */}
-      {activeVideo && (
+      {/* POPUP MODAL */}
+      {showModal && (
         <div className="modal">
           <div className="modal-content">
-            <span className="close" onClick={closeModal}>
+            <span
+              className="close"
+              onClick={() => setShowModal(false)}
+            >
               &times;
             </span>
 
             <iframe
-              width="100%"
-              height="400"
-              src={`https://www.youtube.com/embed/${activeVideo}?autoplay=1`}
-              title="Live Stream"
+              src={`https://www.youtube.com/embed/live_stream?channel=${CHANNEL_ID}&autoplay=1`}
+              title="NSPPD Live Stream"
               frameBorder="0"
               allow="autoplay; encrypted-media"
               allowFullScreen
