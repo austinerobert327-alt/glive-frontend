@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import jerryImage from "./assets/jerry.jpg";
 
-const CHANNEL_ID = "UC0zK8lZ8zKExampleRealID"; // Official @pastorjerryeze channel ID
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 
 function App() {
@@ -14,9 +13,9 @@ function App() {
   useEffect(() => {
     const fetchYouTubeData = async () => {
       try {
-        // 🔴 Check if channel is LIVE
+        // 🔴 Check LIVE via handle search
         const liveResponse = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=from:@pastorjerryeze&type=video&eventType=live&key=${API_KEY}`
         );
 
         const liveData = await liveResponse.json();
@@ -27,7 +26,7 @@ function App() {
         } else {
           // 📺 If not live → get latest uploaded video
           const latestResponse = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&order=date&maxResults=1&type=video&key=${API_KEY}`
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&q=from:@pastorjerryeze&type=video&order=date&maxResults=1&key=${API_KEY}`
           );
 
           const latestData = await latestResponse.json();
@@ -78,14 +77,16 @@ function App() {
           {loading ? (
             <button disabled>Checking Status...</button>
           ) : (
-            <button onClick={() => setShowModal(true)}>
+            <button
+              disabled={!videoId}
+              onClick={() => setShowModal(true)}
+            >
               {isLive ? "Watch Live" : "Watch Latest Service"}
             </button>
           )}
         </div>
       </div>
 
-      {/* POPUP MODAL */}
       {showModal && videoId && (
         <div className="modal">
           <div className="modal-content">
