@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import jerryImage from "./assets/jerry.jpg";
+import { db } from "./firebase";
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+} from "firebase/firestore";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const HANDLE = "pastorjerryeze";
@@ -11,44 +19,40 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
 
+  // Chat + Interaction
+  const [comments, setComments] = useState([]);
+  const [commentInput, setCommentInput] = useState("");
+  const [username, setUsername] = useState("");
+  const [likes, setLikes] = useState(0);
+
+  // ---------------- YOUTUBE FETCH ----------------
   useEffect(() => {
     const fetchChannelAndVideos = async () => {
       try {
-        // 1️⃣ Get real channel ID from handle
         const channelRes = await fetch(
           `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${HANDLE}&key=${API_KEY}`
         );
 
         const channelData = await channelRes.json();
-
-        if (!channelData.items || channelData.items.length === 0) {
-          throw new Error("Channel not found");
-        }
-
         const channelId = channelData.items[0].id.channelId;
 
-        // 2️⃣ Check if LIVE
         const liveRes = await fetch(
           `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${API_KEY}`
         );
 
         const liveData = await liveRes.json();
 
-        if (liveData.items && liveData.items.length > 0) {
+        if (liveData.items.length > 0) {
           setVideoId(liveData.items[0].id.videoId);
           setIsLive(true);
         } else {
-          // 3️⃣ If not live → get latest upload
           const latestRes = await fetch(
             `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&maxResults=1&type=video&key=${API_KEY}`
           );
 
           const latestData = await latestRes.json();
-
-          if (latestData.items && latestData.items.length > 0) {
-            setVideoId(latestData.items[0].id.videoId);
-            setIsLive(false);
-          }
+          setVideoId(latestData.items[0].id.videoId);
+          setIsLive(false);
         }
 
         setLoading(false);
@@ -60,6 +64,69 @@ function App() {
 
     fetchChannelAndVideos();
   }, []);
+
+  // ---------------- REALTIME COMMENTS ----------------
+  useEffect(() => {
+    const q = query(collection(db, "comments"), orderBy("createdAt", "asc"));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setComments(snapshot.docs.map((doc) => doc.data()));
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const sendComment = async () => {
+    if (!commentInput || !username) return;
+
+    await addDoc(collection(db, "comments"), {
+      name: username,
+      text: commentInput,
+      createdAt: new Date(),
+    });
+
+    setCommentInput("");
+  };
+
+  // ---------------- LIKES ----------------
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "likes"), (snapshot) => {
+      setLikes(snapshot.size);
+    });
+
+    return () => unsub();
+  }, []);
+
+  const sendLike = async () => {
+    await addDoc(collection(db, "likes"), {
+      createdAt: new Date(),
+    });
+  };
+
+  // ---------------- GIFTS (Paystack) ----------------
+  const payGift = (amount) => {
+    const generatedEmail = `supporter${Date.now()}@glive.com`;
+
+    const handler = window.PaystackPop.setup({
+      key: "pk_live_019365ea37124e26f8baec964658b07837520356",
+      email: generatedEmail,
+      amount: amount * 100,
+      currency: "NGN",
+      callback: async function () {
+        await addDoc(collection(db, "gifts"), {
+          amount,
+          createdAt: new Date(),
+        });
+
+        alert("Thank you for your gift ❤️");
+      },
+      onClose: function () {
+        console.log("Payment closed");
+      },
+    });
+
+    handler.openIframe();
+  };
 
   return (
     <div className="container">
@@ -86,28 +153,22 @@ function App() {
 
           <h3>NSPPD Prayer Service</h3>
           <p>Pastor Jerry Eze</p>
-          <p className="live-time">⏰ 7:00 AM (WAT)</p>
 
           {loading ? (
             <button disabled>Checking Status...</button>
           ) : (
-            <button
-              disabled={!videoId}
-              onClick={() => setShowModal(true)}
-            >
+            <button onClick={() => setShowModal(true)}>
               {isLive ? "Watch Live" : "Watch Latest Service"}
             </button>
           )}
         </div>
       </div>
 
+      {/* VIDEO MODAL */}
       {showModal && videoId && (
         <div className="modal">
           <div className="modal-content">
-            <span
-              className="close"
-              onClick={() => setShowModal(false)}
-            >
+            <span className="close" onClick={() => setShowModal(false)}>
               &times;
             </span>
 
@@ -118,6 +179,47 @@ function App() {
               allow="autoplay; encrypted-media"
               allowFullScreen
             ></iframe>
+
+            {/* INTERACTION SECTION */}
+            <div className="interaction">
+
+              <button onClick={sendLike}>
+                ❤️ {likes}
+              </button>
+
+              <div className="gift-buttons">
+                <button onClick={() => payGift(500)}>🌟 ₦500</button>
+                <button onClick={() => payGift(1000)}>🔥 ₦1000</button>
+                <button onClick={() => payGift(5000)}>👑 ₦5000</button>
+              </div>
+
+              <div className="chat-box">
+                <h3>Live Chat</h3>
+
+                <input
+                  placeholder="Your Name"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+
+                <div className="messages">
+                  {comments.map((c, index) => (
+                    <p key={index}>
+                      <strong>{c.name}:</strong> {c.text}
+                    </p>
+                  ))}
+                </div>
+
+                <input
+                  placeholder="Type a message..."
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                />
+
+                <button onClick={sendComment}>Send</button>
+              </div>
+
+            </div>
           </div>
         </div>
       )}
