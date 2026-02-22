@@ -3,6 +3,7 @@ import "./App.css";
 import jerryImage from "./assets/jerry.jpg";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
+const HANDLE = "pastorjerryeze";
 
 function App() {
   const [videoId, setVideoId] = useState(null);
@@ -11,25 +12,38 @@ function App() {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    const fetchYouTubeData = async () => {
+    const fetchChannelAndVideos = async () => {
       try {
-        // 🔴 Check LIVE via handle search
-        const liveResponse = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=from:@pastorjerryeze&type=video&eventType=live&key=${API_KEY}`
+        // 1️⃣ Get real channel ID from handle
+        const channelRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${HANDLE}&key=${API_KEY}`
         );
 
-        const liveData = await liveResponse.json();
+        const channelData = await channelRes.json();
+
+        if (!channelData.items || channelData.items.length === 0) {
+          throw new Error("Channel not found");
+        }
+
+        const channelId = channelData.items[0].id.channelId;
+
+        // 2️⃣ Check if LIVE
+        const liveRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${API_KEY}`
+        );
+
+        const liveData = await liveRes.json();
 
         if (liveData.items && liveData.items.length > 0) {
           setVideoId(liveData.items[0].id.videoId);
           setIsLive(true);
         } else {
-          // 📺 If not live → get latest uploaded video
-          const latestResponse = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&q=from:@pastorjerryeze&type=video&order=date&maxResults=1&key=${API_KEY}`
+          // 3️⃣ If not live → get latest upload
+          const latestRes = await fetch(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&maxResults=1&type=video&key=${API_KEY}`
           );
 
-          const latestData = await latestResponse.json();
+          const latestData = await latestRes.json();
 
           if (latestData.items && latestData.items.length > 0) {
             setVideoId(latestData.items[0].id.videoId);
@@ -44,7 +58,7 @@ function App() {
       }
     };
 
-    fetchYouTubeData();
+    fetchChannelAndVideos();
   }, []);
 
   return (
