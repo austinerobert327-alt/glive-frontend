@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
+import jerryImage from "./assets/jerry.jpg";
 import { db } from "./firebase";
 import {
   collection,
@@ -15,13 +16,15 @@ const HANDLE = "pastorjerryeze";
 function App() {
   const [videoId, setVideoId] = useState(null);
   const [isLive, setIsLive] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState("");
   const [likes, setLikes] = useState(0);
-  const [showGifts, setShowGifts] = useState(false);
-  const chatRef = useRef(null);
+  const [showGiftPanel, setShowGiftPanel] = useState(false);
+  const [showLikeAnim, setShowLikeAnim] = useState(false);
+  const [showGiftAnim, setShowGiftAnim] = useState(null);
 
-  // 🔴 FETCH YOUTUBE LIVE OR LATEST
+  // 🔴 Fetch YouTube Live or Latest
   useEffect(() => {
     const fetchVideo = async () => {
       const channelRes = await fetch(
@@ -40,7 +43,7 @@ function App() {
         setIsLive(true);
       } else {
         const latestRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&maxResults=1&type=video&key=${API_KEY}`
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=1&key=${API_KEY}`
         );
         const latestData = await latestRes.json();
         setVideoId(latestData.items[0].id.videoId);
@@ -51,14 +54,11 @@ function App() {
     fetchVideo();
   }, []);
 
-  // 💬 REALTIME CHAT
+  // 💬 Chat
   useEffect(() => {
     const q = query(collection(db, "comments"), orderBy("createdAt", "asc"));
     const unsub = onSnapshot(q, (snapshot) => {
       setComments(snapshot.docs.map((doc) => doc.data()));
-      setTimeout(() => {
-        chatRef.current?.scrollTo(0, chatRef.current.scrollHeight);
-      }, 100);
     });
     return () => unsub();
   }, []);
@@ -72,7 +72,7 @@ function App() {
     setInput("");
   };
 
-  // ❤️ LIKES
+  // ❤️ Likes
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "likes"), (snap) => {
       setLikes(snap.size);
@@ -81,13 +81,13 @@ function App() {
   }, []);
 
   const sendLike = async () => {
-    await addDoc(collection(db, "likes"), {
-      createdAt: new Date(),
-    });
+    await addDoc(collection(db, "likes"), { createdAt: new Date() });
+    setShowLikeAnim(true);
+    setTimeout(() => setShowLikeAnim(false), 800);
   };
 
-  // 🎁 PAYSTACK
-  const sendGift = (amount) => {
+  // 🎁 Gift
+  const sendGift = (emoji, amount) => {
     const handler = window.PaystackPop.setup({
       key: "pk_live_019365ea37124e26f8baec964658b07837520356",
       email: `user${Date.now()}@glive.com`,
@@ -98,65 +98,80 @@ function App() {
           amount,
           createdAt: new Date(),
         });
-        alert("Thank you for supporting ❤️");
+        setShowGiftAnim(emoji);
+        setTimeout(() => setShowGiftAnim(null), 1000);
       },
     });
     handler.openIframe();
   };
 
   return (
-    <div className="live-container">
+    <div className="page">
 
-      {/* VIDEO */}
-      {videoId && (
-        <iframe
-          className="live-video"
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-          title="Live Stream"
-        />
-      )}
-
-      {/* TOP BAR */}
-      <div className="top-bar">
+      {/* PRE PAGE */}
+      <div className="card">
         {isLive && <span className="live-badge">LIVE</span>}
-        <span className="viewer-count">❤️ {likes}</span>
+        <img src={jerryImage} alt="NSPPD" />
+        <button onClick={() => setShowModal(true)}>
+          {isLive ? "Watch Live" : "Watch Latest"}
+        </button>
       </div>
 
-      {/* CHAT OVERLAY */}
-      <div className="chat-overlay" ref={chatRef}>
-        {comments.map((c, i) => (
-          <div key={i} className="chat-bubble">
-            {c.text}
+      {/* POPUP */}
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal-top">
+
+            <span className="close" onClick={() => setShowModal(false)}>×</span>
+
+            {/* VIDEO */}
+            <iframe
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+              allow="autoplay"
+              allowFullScreen
+              title="Live"
+            />
+
+            {/* INTERACTION ROW */}
+            <div className="interaction-row">
+              <div onClick={sendLike}>❤️ {likes}</div>
+              <div>💬 {comments.length}</div>
+              <div onClick={() => setShowGiftPanel(true)}>🎁</div>
+            </div>
+
+            {/* COMMENTS */}
+            <div className="comment-section">
+              {comments.map((c, i) => (
+                <div key={i} className="comment">{c.text}</div>
+              ))}
+            </div>
+
+            {/* INPUT */}
+            <div className="input-row">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Send message..."
+              />
+              <button onClick={sendMessage}>Send</button>
+            </div>
+
           </div>
-        ))}
-      </div>
 
-      {/* RIGHT ACTIONS */}
-      <div className="right-actions">
-        <button className="action-btn" onClick={sendLike}>❤️</button>
-        <button className="action-btn" onClick={() => setShowGifts(!showGifts)}>🎁</button>
-      </div>
+          {/* GIFT PANEL */}
+          <div className={`gift-panel ${showGiftPanel ? "show" : ""}`}>
+            <span onClick={() => sendGift("🌟", 500)}>🌟</span>
+            <span onClick={() => sendGift("🔥", 1000)}>🔥</span>
+            <span onClick={() => sendGift("👑", 5000)}>👑</span>
+            <button onClick={() => setShowGiftPanel(false)}>Close</button>
+          </div>
 
-      {/* GIFT PANEL */}
-      {showGifts && (
-        <div className="gift-panel">
-          <span onClick={() => sendGift(500)}>🌟</span>
-          <span onClick={() => sendGift(1000)}>🔥</span>
-          <span onClick={() => sendGift(5000)}>👑</span>
+          {/* ANIMATIONS */}
+          {showLikeAnim && <div className="center-anim">❤️</div>}
+          {showGiftAnim && <div className="center-anim">{showGiftAnim}</div>}
+
         </div>
       )}
-
-      {/* BOTTOM INPUT */}
-      <div className="bottom-bar">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Send a chat..."
-        />
-        <button onClick={sendMessage}>Send</button>
-      </div>
     </div>
   );
 }
