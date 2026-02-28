@@ -24,7 +24,7 @@ function App() {
   const [showLikeAnim, setShowLikeAnim] = useState(false);
   const [showGiftAnim, setShowGiftAnim] = useState(null);
 
-  // 🔴 Fetch YouTube Live or Latest
+  // Fetch YouTube
   useEffect(() => {
     const fetchVideo = async () => {
       const channelRes = await fetch(
@@ -54,7 +54,7 @@ function App() {
     fetchVideo();
   }, []);
 
-  // 💬 Chat
+  // Chat realtime
   useEffect(() => {
     const q = query(collection(db, "comments"), orderBy("createdAt", "asc"));
     const unsub = onSnapshot(q, (snapshot) => {
@@ -64,7 +64,7 @@ function App() {
   }, []);
 
   const sendMessage = async () => {
-    if (!input) return;
+    if (!input.trim()) return;
     await addDoc(collection(db, "comments"), {
       text: input,
       createdAt: new Date(),
@@ -72,7 +72,7 @@ function App() {
     setInput("");
   };
 
-  // ❤️ Likes
+  // Likes realtime
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "likes"), (snap) => {
       setLikes(snap.size);
@@ -86,7 +86,7 @@ function App() {
     setTimeout(() => setShowLikeAnim(false), 800);
   };
 
-  // 🎁 Gift
+  // Gift
   const sendGift = (emoji, amount) => {
     const handler = window.PaystackPop.setup({
       key: "pk_live_019365ea37124e26f8baec964658b07837520356",
@@ -117,7 +117,7 @@ function App() {
         </button>
       </div>
 
-      {/* POPUP */}
+      {/* MODAL */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-top">
@@ -132,13 +132,6 @@ function App() {
               title="Live"
             />
 
-            {/* INTERACTION ROW */}
-            <div className="interaction-row">
-              <div onClick={sendLike}>❤️ {likes}</div>
-              <div>💬 {comments.length}</div>
-              <div onClick={() => setShowGiftPanel(true)}>🎁</div>
-            </div>
-
             {/* COMMENTS */}
             <div className="comment-section">
               {comments.map((c, i) => (
@@ -146,14 +139,26 @@ function App() {
               ))}
             </div>
 
-            {/* INPUT */}
-            <div className="input-row">
+            {/* BOTTOM BAR */}
+            <div className="bottom-action-bar">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Send message..."
               />
-              <button onClick={sendMessage}>Send</button>
+
+              <button className="icon-btn" onClick={sendMessage}>➤</button>
+
+              <button className="icon-btn" onClick={sendLike}>
+                ❤️ {likes}
+              </button>
+
+              <button
+                className="icon-btn"
+                onClick={() => setShowGiftPanel(true)}
+              >
+                🎁
+              </button>
             </div>
 
           </div>
@@ -166,7 +171,7 @@ function App() {
             <button onClick={() => setShowGiftPanel(false)}>Close</button>
           </div>
 
-          {/* ANIMATIONS */}
+          {/* CENTER ANIMATIONS */}
           {showLikeAnim && <div className="center-anim">❤️</div>}
           {showGiftAnim && <div className="center-anim">{showGiftAnim}</div>}
 
