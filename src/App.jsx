@@ -19,10 +19,8 @@ function App() {
   const [showModal, setShowModal] = useState(false);
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState("");
-  const [likes, setLikes] = useState(0);
   const [showGiftPanel, setShowGiftPanel] = useState(false);
-  const [showLikeAnim, setShowLikeAnim] = useState(false);
-  const [showGiftAnim, setShowGiftAnim] = useState(null);
+  const [floatingLikes, setFloatingLikes] = useState([]);
 
   // Fetch YouTube
   useEffect(() => {
@@ -54,7 +52,7 @@ function App() {
     fetchVideo();
   }, []);
 
-  // Chat realtime
+  // Realtime comments
   useEffect(() => {
     const q = query(collection(db, "comments"), orderBy("createdAt", "asc"));
     const unsub = onSnapshot(q, (snapshot) => {
@@ -72,42 +70,18 @@ function App() {
     setInput("");
   };
 
-  // Likes realtime
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, "likes"), (snap) => {
-      setLikes(snap.size);
-    });
-    return () => unsub();
-  }, []);
+  // Floating like animation
+  const sendLike = () => {
+    const id = Date.now();
+    setFloatingLikes((prev) => [...prev, id]);
 
-  const sendLike = async () => {
-    await addDoc(collection(db, "likes"), { createdAt: new Date() });
-    setShowLikeAnim(true);
-    setTimeout(() => setShowLikeAnim(false), 800);
-  };
-
-  // Gift
-  const sendGift = (emoji, amount) => {
-    const handler = window.PaystackPop.setup({
-      key: "pk_live_019365ea37124e26f8baec964658b07837520356",
-      email: `user${Date.now()}@glive.com`,
-      amount: amount * 100,
-      currency: "NGN",
-      callback: async function () {
-        await addDoc(collection(db, "gifts"), {
-          amount,
-          createdAt: new Date(),
-        });
-        setShowGiftAnim(emoji);
-        setTimeout(() => setShowGiftAnim(null), 1000);
-      },
-    });
-    handler.openIframe();
+    setTimeout(() => {
+      setFloatingLikes((prev) => prev.filter((like) => like !== id));
+    }, 3000);
   };
 
   return (
     <div className="page">
-
       {/* PRE PAGE */}
       <div className="card">
         {isLive && <span className="live-badge">LIVE</span>}
@@ -121,8 +95,9 @@ function App() {
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-top">
-
-            <span className="close" onClick={() => setShowModal(false)}>×</span>
+            <span className="close" onClick={() => setShowModal(false)}>
+              ×
+            </span>
 
             {/* VIDEO */}
             <iframe
@@ -135,22 +110,36 @@ function App() {
             {/* COMMENTS */}
             <div className="comment-section">
               {comments.map((c, i) => (
-                <div key={i} className="comment">{c.text}</div>
+                <div key={i} className="comment">
+                  {c.text}
+                </div>
+              ))}
+            </div>
+
+            {/* FLOATING HEARTS */}
+            <div className="floating-container">
+              {floatingLikes.map((id) => (
+                <div key={id} className="floating-heart">
+                  ❤️
+                </div>
               ))}
             </div>
 
             {/* BOTTOM BAR */}
             <div className="bottom-action-bar">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Send message..."
-              />
-
-              <button className="icon-btn" onClick={sendMessage}>➤</button>
+              <div className="input-wrapper">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Send message..."
+                />
+                <span className="send-inside" onClick={sendMessage}>
+                  ➤
+                </span>
+              </div>
 
               <button className="icon-btn" onClick={sendLike}>
-                ❤️ {likes}
+                ❤️
               </button>
 
               <button
@@ -160,21 +149,15 @@ function App() {
                 🎁
               </button>
             </div>
-
           </div>
 
           {/* GIFT PANEL */}
           <div className={`gift-panel ${showGiftPanel ? "show" : ""}`}>
-            <span onClick={() => sendGift("🌟", 500)}>🌟</span>
-            <span onClick={() => sendGift("🔥", 1000)}>🔥</span>
-            <span onClick={() => sendGift("👑", 5000)}>👑</span>
+            <span>🌟</span>
+            <span>🔥</span>
+            <span>👑</span>
             <button onClick={() => setShowGiftPanel(false)}>Close</button>
           </div>
-
-          {/* CENTER ANIMATIONS */}
-          {showLikeAnim && <div className="center-anim">❤️</div>}
-          {showGiftAnim && <div className="center-anim">{showGiftAnim}</div>}
-
         </div>
       )}
     </div>
