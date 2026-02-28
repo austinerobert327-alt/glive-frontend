@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import jerryImage from "./assets/jerry.jpg";
 import { db } from "./firebase";
@@ -19,8 +19,9 @@ function App() {
   const [showModal, setShowModal] = useState(false);
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState("");
-  const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [floatingLikes, setFloatingLikes] = useState([]);
+
+  const commentRef = useRef(null);
 
   // Fetch YouTube
   useEffect(() => {
@@ -61,6 +62,13 @@ function App() {
     return () => unsub();
   }, []);
 
+  // AUTO SCROLL when comments update
+  useEffect(() => {
+    if (commentRef.current) {
+      commentRef.current.scrollTop = commentRef.current.scrollHeight;
+    }
+  }, [comments]);
+
   const sendMessage = async () => {
     if (!input.trim()) return;
     await addDoc(collection(db, "comments"), {
@@ -70,19 +78,24 @@ function App() {
     setInput("");
   };
 
-  // Floating like animation
+  // Floating hearts
   const sendLike = () => {
     const id = Date.now();
-    setFloatingLikes((prev) => [...prev, id]);
+    const colors = ["#ff2d55", "#ff5e3a", "#ff9500", "#ff3b30", "#ff1493"];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    setFloatingLikes((prev) => [
+      ...prev,
+      { id, color: randomColor, left: Math.random() * 40 }
+    ]);
 
     setTimeout(() => {
-      setFloatingLikes((prev) => prev.filter((like) => like !== id));
+      setFloatingLikes((prev) => prev.filter((like) => like.id !== id));
     }, 3000);
   };
 
   return (
-    <div className="page">
-      {/* PRE PAGE */}
+    <div className="mobile-container">
       <div className="card">
         {isLive && <span className="live-badge">LIVE</span>}
         <img src={jerryImage} alt="NSPPD" />
@@ -91,72 +104,56 @@ function App() {
         </button>
       </div>
 
-      {/* MODAL */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-top">
-            <span className="close" onClick={() => setShowModal(false)}>
-              ×
-            </span>
-
-            {/* VIDEO */}
+        <div className="live-screen">
+          {/* VIDEO */}
+          <div className="video-wrapper">
             <iframe
               src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
               allow="autoplay"
               allowFullScreen
               title="Live"
             />
-
-            {/* COMMENTS */}
-            <div className="comment-section">
-              {comments.map((c, i) => (
-                <div key={i} className="comment">
-                  {c.text}
-                </div>
-              ))}
-            </div>
-
-            {/* FLOATING HEARTS */}
-            <div className="floating-container">
-              {floatingLikes.map((id) => (
-                <div key={id} className="floating-heart">
-                  ❤️
-                </div>
-              ))}
-            </div>
-
-            {/* BOTTOM BAR */}
-            <div className="bottom-action-bar">
-              <div className="input-wrapper">
-                <input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Send message..."
-                />
-                <span className="send-inside" onClick={sendMessage}>
-                  ➤
-                </span>
-              </div>
-
-              <button className="icon-btn" onClick={sendLike}>
-                ❤️
-              </button>
-
-              <button
-                className="icon-btn"
-                onClick={() => setShowGiftPanel(true)}
-              >
-                🎁
-              </button>
-            </div>
           </div>
 
-          {/* GIFT PANEL */}
-          <div className={`gift-panel ${showGiftPanel ? "show" : ""}`}>
-            <span>🌟</span>
-            <span>🔥</span>
-            <span>👑</span>
-            <button onClick={() => setShowGiftPanel(false)}>Close</button>
+          {/* COMMENTS */}
+          <div className="comment-section" ref={commentRef}>
+            {comments.map((c, i) => (
+              <div key={i} className="comment">
+                {c.text}
+              </div>
+            ))}
+          </div>
+
+          {/* FLOATING HEARTS */}
+          <div className="floating-container">
+            {floatingLikes.map((heart) => (
+              <div
+                key={heart.id}
+                className="floating-heart"
+                style={{
+                  left: `${heart.left}px`,
+                  color: heart.color
+                }}
+              >
+                ❤️
+              </div>
+            ))}
+          </div>
+
+          {/* BOTTOM BAR */}
+          <div className="bottom-bar">
+            <div className="input-wrapper">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Send message..."
+              />
+              <span onClick={sendMessage}>➤</span>
+            </div>
+
+            <button onClick={sendLike}>❤️</button>
+            <button>🎁</button>
           </div>
         </div>
       )}
