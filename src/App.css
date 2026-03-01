@@ -9,30 +9,35 @@ body {
   padding: 0;
   background: #000;
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  overflow: hidden;
   height: 100%;
+  overflow: hidden;
 }
 
 /* MOBILE CONTAINER */
 .mobile-container {
   height: 100dvh;
   width: 100%;
-  position: relative;
   overflow: hidden;
 }
 
-/* FULL SCREEN LIVE */
+/* FULL SCREEN LIVE LAYOUT */
 .live-screen {
   position: fixed;
   inset: 0;
+  display: flex;
+  flex-direction: column;
   background: black;
 }
 
-/* VIDEO */
+/* ===================== */
+/* VIDEO SECTION (TOP)   */
+/* ===================== */
 .video-wrapper {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
+  width: 100%;
+  height: 55dvh;
+  /* video takes top half */
+  flex-shrink: 0;
+  position: relative;
 }
 
 .video-wrapper iframe {
@@ -41,15 +46,15 @@ body {
   border: none;
 }
 
-/* TOP OVERLAY */
+/* TOP OVERLAY (inside video area) */
 .top-overlay {
   position: absolute;
-  top: 20px;
+  top: 15px;
   left: 15px;
   display: flex;
   gap: 10px;
   align-items: center;
-  z-index: 20;
+  z-index: 5;
 }
 
 .live-badge {
@@ -70,53 +75,51 @@ body {
 /* CLOSE BUTTON */
 .close-btn {
   position: absolute;
-  top: 20px;
+  top: 15px;
   right: 15px;
   font-size: 22px;
   color: white;
-  z-index: 20;
   cursor: pointer;
+  z-index: 5;
 }
 
-/* COMMENTS OVERLAY */
+/* ===================== */
+/* COMMENTS SECTION      */
+/* ===================== */
 .comment-overlay {
-  position: absolute;
-  bottom: 110px;
-  left: 15px;
-  width: 75%;
-  max-height: 45%;
+  flex: 1;
   overflow-y: auto;
-  z-index: 15;
-  padding-right: 5px;
-
-  /* FADE EFFECT (TikTok style) */
-  mask-image: linear-gradient(to top, black 70%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to top, black 70%, transparent 100%);
+  padding: 15px;
+  padding-bottom: 120px;
+  /* space for input */
+  background: #000;
 }
 
-/* HIDE SCROLLBAR */
+/* hide scrollbar */
 .comment-overlay::-webkit-scrollbar {
   display: none;
 }
 
 .comment {
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(255, 255, 255, 0.06);
   padding: 8px 12px;
   margin-bottom: 8px;
-  border-radius: 18px;
+  border-radius: 16px;
   font-size: 13px;
-  backdrop-filter: blur(6px);
+  color: white;
   word-break: break-word;
 }
 
 .comment strong {
-  color: #ff4d6d;
+  color: #ff2d55;
   margin-right: 5px;
 }
 
-/* RIGHT ACTIONS */
+/* ===================== */
+/* RIGHT ACTION BUTTONS  */
+/* ===================== */
 .right-actions {
-  position: absolute;
+  position: fixed;
   right: 15px;
   bottom: 140px;
   display: flex;
@@ -132,7 +135,6 @@ body {
   font-size: 22px;
   padding: 12px;
   border-radius: 50%;
-  backdrop-filter: blur(6px);
   cursor: pointer;
 }
 
@@ -141,9 +143,11 @@ body {
   cursor: not-allowed;
 }
 
-/* FLOATING HEARTS */
+/* ===================== */
+/* FLOATING HEARTS       */
+/* ===================== */
 .floating-container {
-  position: absolute;
+  position: fixed;
   right: 25px;
   bottom: 140px;
   pointer-events: none;
@@ -169,9 +173,11 @@ body {
   }
 }
 
-/* BOTTOM INPUT */
+/* ===================== */
+/* BOTTOM INPUT          */
+/* ===================== */
 .bottom-input {
-  position: absolute;
+  position: fixed;
   bottom: 20px;
   left: 15px;
   right: 15px;
@@ -187,7 +193,6 @@ body {
   border: none;
   background: rgba(255, 255, 255, 0.1);
   color: white;
-  backdrop-filter: blur(8px);
   outline: none;
   font-size: 14px;
 }
@@ -206,7 +211,9 @@ body {
   cursor: pointer;
 }
 
-/* PREVIEW CARD */
+/* ===================== */
+/* PREVIEW CARD          */
+/* ===================== */
 .card {
   padding: 20px;
 }
