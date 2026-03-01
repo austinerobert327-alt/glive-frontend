@@ -7,13 +7,22 @@ body {
   background: #000;
   font-family: Arial, sans-serif;
   color: white;
+  overflow: hidden;
+  /* prevent double scroll */
 }
 
+/* ==========================
+   MOBILE CONTAINER
+========================== */
 .mobile-container {
   width: 100%;
-  min-height: 100vh;
+  height: 100dvh;
+  /* better than 100vh for mobile */
 }
 
+/* ==========================
+   LIVE SCREEN
+========================== */
 .live-screen {
   position: fixed;
   inset: 0;
@@ -22,39 +31,66 @@ body {
   background: #000;
 }
 
-/* VIDEO */
+/* ==========================
+   VIDEO (16:9 RATIO FIX)
+========================== */
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
 .video-wrapper iframe {
   width: 100%;
-  height: 230px;
+  height: 100%;
   border: none;
 }
 
-/* COMMENTS */
+/* ==========================
+   COMMENTS
+========================== */
 .comment-section {
   flex: 1;
-  margin-top: 15px;
-  /* Space below video */
   padding: 12px;
   overflow-y: auto;
-  padding-bottom: 80px;
+  padding-bottom: 100px;
+  /* space for bottom bar */
 }
 
 .comment {
   font-size: 14px;
   margin-bottom: 8px;
+  animation: fadeInUp 0.25s ease;
 }
 
-/* BOTTOM BAR */
+/* Smooth comment appearance */
+@keyframes fadeInUp {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ==========================
+   BOTTOM BAR
+========================== */
 .bottom-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
   background: #111;
-  padding: 10px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   gap: 10px;
+  backdrop-filter: blur(6px);
 }
 
 .input-wrapper {
@@ -64,49 +100,73 @@ body {
 
 .input-wrapper input {
   width: 100%;
-  padding: 10px 40px 10px 15px;
+  padding: 12px 42px 12px 16px;
   border-radius: 25px;
   border: none;
+  outline: none;
+  font-size: 14px;
 }
 
 .input-wrapper span {
   position: absolute;
-  right: 12px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
   cursor: pointer;
+  font-size: 16px;
 }
 
 .bottom-bar button {
   background: none;
   border: none;
-  font-size: 22px;
+  font-size: 24px;
   color: white;
+  cursor: pointer;
+  padding: 6px;
 }
 
-/* FLOATING HEARTS */
-
+/* ==========================
+   FLOATING HEARTS
+========================== */
 .floating-container {
   position: fixed;
-  bottom: 90px;
+  bottom: 100px;
   right: 20px;
   pointer-events: none;
+  width: 60px;
+  height: 300px;
+  overflow: visible;
 }
 
 .floating-heart {
   position: absolute;
+  bottom: 0;
   font-size: 26px;
-  animation: floatUp 3s ease-out forwards;
+  will-change: transform, opacity;
+  animation: floatUp 3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* More natural floating animation */
 @keyframes floatUp {
   0% {
     transform: translateY(0) scale(1);
     opacity: 1;
   }
 
+  25% {
+    transform: translateY(-80px) translateX(-10px) scale(1.2);
+  }
+
+  50% {
+    transform: translateY(-160px) translateX(10px) scale(1.4);
+  }
+
+  75% {
+    transform: translateY(-220px) translateX(-6px) scale(1.6);
+  }
+
   100% {
-    transform: translateY(-300px) scale(1.8);
+    transform: translateY(-300px) translateX(0px) scale(1.8);
     opacity: 0;
   }
 }

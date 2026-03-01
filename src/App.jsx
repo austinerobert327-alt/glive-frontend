@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import "./App.css";
 import jerryImage from "./assets/jerry.jpg";
 import { db } from "./firebase";
@@ -8,6 +8,7 @@ import {
   onSnapshot,
   query,
   orderBy,
+  limit,
 } from "firebase/firestore";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
@@ -23,74 +24,112 @@ function App() {
 
   const commentRef = useRef(null);
 
-  // Fetch YouTube
+  // ==========================
+  // FETCH YOUTUBE VIDEO
+  // ==========================
   useEffect(() => {
     const fetchVideo = async () => {
-      const channelRes = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${HANDLE}&key=${API_KEY}`
-      );
-      const channelData = await channelRes.json();
-      const channelId = channelData.items[0].id.channelId;
-
-      const liveRes = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${API_KEY}`
-      );
-      const liveData = await liveRes.json();
-
-      if (liveData.items.length > 0) {
-        setVideoId(liveData.items[0].id.videoId);
-        setIsLive(true);
-      } else {
-        const latestRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=1&key=${API_KEY}`
+      try {
+        const channelRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${HANDLE}&key=${API_KEY}`
         );
-        const latestData = await latestRes.json();
-        setVideoId(latestData.items[0].id.videoId);
-        setIsLive(false);
+        const channelData = await channelRes.json();
+        if (!channelData.items?.length) return;
+
+        const channelId = channelData.items[0].id.channelId;
+
+        const liveRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${API_KEY}`
+        );
+        const liveData = await liveRes.json();
+
+        if (liveData.items?.length > 0) {
+          setVideoId(liveData.items[0].id.videoId);
+          setIsLive(true);
+        } else {
+          const latestRes = await fetch(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=1&key=${API_KEY}`
+          );
+          const latestData = await latestRes.json();
+          if (latestData.items?.length > 0) {
+            setVideoId(latestData.items[0].id.videoId);
+            setIsLive(false);
+          }
+        }
+      } catch (err) {
+        console.log("YouTube fetch error:", err);
       }
     };
 
     fetchVideo();
   }, []);
 
-  // Realtime comments
+  // ==========================
+  // REALTIME COMMENTS (LIMITED)
+  // ==========================
   useEffect(() => {
-    const q = query(collection(db, "comments"), orderBy("createdAt", "asc"));
+    const q = query(
+      collection(db, "comments"),
+      orderBy("createdAt", "asc"),
+      limit(50) // 🔥 Prevent Firebase overload
+    );
+
     const unsub = onSnapshot(q, (snapshot) => {
       setComments(snapshot.docs.map((doc) => doc.data()));
     });
+
     return () => unsub();
   }, []);
 
-  // AUTO SCROLL when comments update
+  // ==========================
+  // SMART AUTO SCROLL
+  // ==========================
   useEffect(() => {
-    if (commentRef.current) {
-      commentRef.current.scrollTop = commentRef.current.scrollHeight;
+    const container = commentRef.current;
+    if (!container) return;
+
+    const isAtBottom =
+      container.scrollHeight - container.scrollTop <=
+      container.clientHeight + 20;
+
+    if (isAtBottom) {
+      container.scrollTop = container.scrollHeight;
     }
   }, [comments]);
 
-  const sendMessage = async () => {
+  // ==========================
+  // SEND MESSAGE
+  // ==========================
+  const sendMessage = useCallback(async () => {
     if (!input.trim()) return;
+
     await addDoc(collection(db, "comments"), {
       text: input,
       createdAt: new Date(),
     });
-    setInput("");
-  };
 
-  // Floating hearts
+    setInput("");
+  }, [input]);
+
+  // ==========================
+  // FLOATING HEARTS (LIMITED)
+  // ==========================
   const sendLike = () => {
+    if (floatingLikes.length > 25) return; // 🔥 performance protection
+
     const id = Date.now();
     const colors = ["#ff2d55", "#ff5e3a", "#ff9500", "#ff3b30", "#ff1493"];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
     setFloatingLikes((prev) => [
       ...prev,
-      { id, color: randomColor, left: Math.random() * 40 }
+      { id, color: randomColor, left: Math.random() * 60 }
     ]);
 
     setTimeout(() => {
-      setFloatingLikes((prev) => prev.filter((like) => like.id !== id));
+      setFloatingLikes((prev) =>
+        prev.filter((like) => like.id !== id)
+      );
     }, 3000);
   };
 
@@ -106,11 +145,12 @@ function App() {
 
       {showModal && (
         <div className="live-screen">
+
           {/* VIDEO */}
           <div className="video-wrapper">
             <iframe
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-              allow="autoplay"
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0`}
+              allow="autoplay; encrypted-media"
               allowFullScreen
               title="Live"
             />
@@ -132,7 +172,7 @@ function App() {
                 key={heart.id}
                 className="floating-heart"
                 style={{
-                  left: `${heart.left}px`,
+                  left: `${heart.left}%`,
                   color: heart.color
                 }}
               >
