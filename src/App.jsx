@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import "./App.css";
 import jerryImage from "./assets/jerry.jpg";
 import { db } from "./firebase";
@@ -11,13 +12,19 @@ import {
   limit,
   serverTimestamp,
 } from "firebase/firestore";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut,
+} from "firebase/auth";
 
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const HANDLE = "pastorjerryeze";
 
-function App() {
+function LiveApp() {
   const [videoId, setVideoId] = useState(null);
   const [isLive, setIsLive] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -27,22 +34,15 @@ function App() {
   const [user, setUser] = useState(null);
 
   const commentRef = useRef(null);
+  const navigate = useNavigate();
 
-  // ==========================
-  // AUTH STATE
-  // ==========================
+  /* AUTH */
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-
-    return () => unsubscribe();
+    return onAuthStateChanged(auth, setUser);
   }, []);
 
-  // ==========================
-  // FETCH YOUTUBE
-  // ==========================
+  /* FETCH YOUTUBE */
   useEffect(() => {
     const fetchVideo = async () => {
       try {
@@ -62,27 +62,16 @@ function App() {
         if (liveData.items?.length > 0) {
           setVideoId(liveData.items[0].id.videoId);
           setIsLive(true);
-        } else {
-          const latestRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=1&key=${API_KEY}`
-          );
-          const latestData = await latestRes.json();
-          if (latestData.items?.length > 0) {
-            setVideoId(latestData.items[0].id.videoId);
-            setIsLive(false);
-          }
         }
       } catch (err) {
-        console.log("YouTube fetch error:", err);
+        console.log(err);
       }
     };
 
     fetchVideo();
   }, []);
 
-  // ==========================
-  // REALTIME COMMENTS
-  // ==========================
+  /* COMMENTS */
   useEffect(() => {
     const q = query(
       collection(db, "comments"),
@@ -90,36 +79,22 @@ function App() {
       limit(100)
     );
 
-    const unsub = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => doc.data());
-      setComments(data);
+    return onSnapshot(q, (snapshot) => {
+      setComments(snapshot.docs.map((doc) => doc.data()));
     });
-
-    return () => unsub();
   }, []);
 
-  // ==========================
-  // AUTO SCROLL (SMART)
-  // ==========================
+  /* AUTO SCROLL */
   useEffect(() => {
-    const container = commentRef.current;
-    if (!container) return;
-
-    const isAtBottom =
-      container.scrollHeight - container.scrollTop <=
-      container.clientHeight + 30;
-
-    if (isAtBottom) {
-      container.scrollTop = container.scrollHeight;
-    }
+    const el = commentRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
   }, [comments]);
 
-  // ==========================
-  // SEND MESSAGE (AUTH REQUIRED)
-  // ==========================
+  /* SEND MESSAGE */
   const sendMessage = useCallback(async () => {
     if (!user) {
-      alert("Please login to comment");
+      navigate("/login");
       return;
     }
 
@@ -127,7 +102,7 @@ function App() {
 
     await addDoc(collection(db, "comments"), {
       text: input,
-      username: user.displayName || user.email || "User",
+      username: user.displayName || user.email,
       uid: user.uid,
       createdAt: serverTimestamp(),
     });
@@ -135,14 +110,12 @@ function App() {
     setInput("");
   }, [input, user]);
 
-  // ==========================
-  // FLOATING HEARTS
-  // ==========================
+  /* HEARTS */
   const sendLike = () => {
     if (floatingLikes.length > 25) return;
 
     const id = Date.now();
-    const colors = ["#ff2d55", "#ff5e3a", "#ff9500", "#ff3b30", "#ff1493"];
+    const colors = ["#ff2d55", "#ff5e3a", "#ff9500"];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
     setFloatingLikes((prev) => [
@@ -151,64 +124,55 @@ function App() {
     ]);
 
     setTimeout(() => {
-      setFloatingLikes((prev) => prev.filter((like) => like.id !== id));
+      setFloatingLikes((prev) => prev.filter((h) => h.id !== id));
     }, 3000);
   };
 
   return (
     <div className="mobile-container">
-      {/* PREVIEW CARD */}
       {!showModal && (
         <div className="card">
           {isLive && <span className="live-badge">LIVE</span>}
           <img src={jerryImage} alt="Live preview" />
           <button onClick={() => setShowModal(true)}>
-            {isLive ? "Watch Live" : "Watch Latest"}
+            Watch Live
           </button>
         </div>
       )}
 
-      {/* FULLSCREEN LIVE */}
       {showModal && (
         <div className="live-screen">
-          {/* VIDEO */}
           <div className="video-wrapper">
             <iframe
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0`}
-              allow="autoplay; encrypted-media"
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1`}
+              allow="autoplay"
               allowFullScreen
               title="Live"
             />
           </div>
 
-          {/* TOP INFO */}
           <div className="top-overlay">
             {isLive && <span className="live-badge">LIVE</span>}
             <span className="viewer-count">👁 1.2K</span>
           </div>
 
-          {/* CLOSE */}
           <div className="close-btn" onClick={() => setShowModal(false)}>
             ✕
           </div>
 
-          {/* COMMENTS */}
           <div className="comment-overlay" ref={commentRef}>
             {comments.map((c, i) => (
               <div key={i} className="comment">
-                <strong>{c.username || "Guest"}:</strong> {c.text}
+                <strong>{c.username}:</strong> {c.text}
               </div>
             ))}
           </div>
 
-          {/* RIGHT ACTIONS */}
           <div className="right-actions">
             <button onClick={sendLike}>❤️</button>
             <button disabled={!user}>🎁</button>
-            <button>🔗</button>
           </div>
 
-          {/* FLOATING HEARTS */}
           <div className="floating-container">
             {floatingLikes.map((heart) => (
               <div
@@ -224,22 +188,37 @@ function App() {
             ))}
           </div>
 
-          {/* BOTTOM INPUT */}
           <div className="bottom-input">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={
-                user ? "Add comment..." : "Login to comment..."
-              }
-              disabled={!user}
+              placeholder="Add comment..."
             />
-            {user && <button onClick={sendMessage}>Send</button>}
+            <button onClick={sendMessage}>
+              {user ? "Send" : "Login"}
+            </button>
           </div>
+
+          {user && (
+            <button
+              style={{ position: "fixed", top: 15, right: 60 }}
+              onClick={() => signOut(getAuth())}
+            >
+              Logout
+            </button>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<LiveApp />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+    </Routes>
+  );
+}
