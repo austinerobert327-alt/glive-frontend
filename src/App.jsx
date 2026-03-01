@@ -9,7 +9,10 @@ import {
   query,
   orderBy,
   limit,
+  serverTimestamp,
 } from "firebase/firestore";
+
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const HANDLE = "pastorjerryeze";
@@ -21,8 +24,21 @@ function App() {
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState("");
   const [floatingLikes, setFloatingLikes] = useState([]);
+  const [user, setUser] = useState(null);
 
   const commentRef = useRef(null);
+
+  // ==========================
+  // AUTH STATE
+  // ==========================
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // ==========================
   // FETCH YOUTUBE
@@ -71,18 +87,19 @@ function App() {
     const q = query(
       collection(db, "comments"),
       orderBy("createdAt", "asc"),
-      limit(50)
+      limit(100)
     );
 
     const unsub = onSnapshot(q, (snapshot) => {
-      setComments(snapshot.docs.map((doc) => doc.data()));
+      const data = snapshot.docs.map((doc) => doc.data());
+      setComments(data);
     });
 
     return () => unsub();
   }, []);
 
   // ==========================
-  // SMART AUTO SCROLL
+  // AUTO SCROLL (SMART)
   // ==========================
   useEffect(() => {
     const container = commentRef.current;
@@ -90,7 +107,7 @@ function App() {
 
     const isAtBottom =
       container.scrollHeight - container.scrollTop <=
-      container.clientHeight + 20;
+      container.clientHeight + 30;
 
     if (isAtBottom) {
       container.scrollTop = container.scrollHeight;
@@ -98,18 +115,25 @@ function App() {
   }, [comments]);
 
   // ==========================
-  // SEND MESSAGE
+  // SEND MESSAGE (AUTH REQUIRED)
   // ==========================
   const sendMessage = useCallback(async () => {
+    if (!user) {
+      alert("Please login to comment");
+      return;
+    }
+
     if (!input.trim()) return;
 
     await addDoc(collection(db, "comments"), {
       text: input,
-      createdAt: new Date(),
+      username: user.displayName || user.email || "User",
+      uid: user.uid,
+      createdAt: serverTimestamp(),
     });
 
     setInput("");
-  }, [input]);
+  }, [input, user]);
 
   // ==========================
   // FLOATING HEARTS
@@ -123,19 +147,16 @@ function App() {
 
     setFloatingLikes((prev) => [
       ...prev,
-      { id, color: randomColor, left: Math.random() * 60 }
+      { id, color: randomColor, left: Math.random() * 60 },
     ]);
 
     setTimeout(() => {
-      setFloatingLikes((prev) =>
-        prev.filter((like) => like.id !== id)
-      );
+      setFloatingLikes((prev) => prev.filter((like) => like.id !== id));
     }, 3000);
   };
 
   return (
     <div className="mobile-container">
-
       {/* PREVIEW CARD */}
       {!showModal && (
         <div className="card">
@@ -150,8 +171,7 @@ function App() {
       {/* FULLSCREEN LIVE */}
       {showModal && (
         <div className="live-screen">
-
-          {/* VIDEO FULLSCREEN */}
+          {/* VIDEO */}
           <div className="video-wrapper">
             <iframe
               src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0`}
@@ -161,22 +181,22 @@ function App() {
             />
           </div>
 
-          {/* TOP LEFT INFO */}
+          {/* TOP INFO */}
           <div className="top-overlay">
             {isLive && <span className="live-badge">LIVE</span>}
             <span className="viewer-count">👁 1.2K</span>
           </div>
 
-          {/* CLOSE BUTTON */}
+          {/* CLOSE */}
           <div className="close-btn" onClick={() => setShowModal(false)}>
             ✕
           </div>
 
-          {/* COMMENTS OVERLAY */}
+          {/* COMMENTS */}
           <div className="comment-overlay" ref={commentRef}>
             {comments.map((c, i) => (
               <div key={i} className="comment">
-                {c.text}
+                <strong>{c.username || "Guest"}:</strong> {c.text}
               </div>
             ))}
           </div>
@@ -184,7 +204,7 @@ function App() {
           {/* RIGHT ACTIONS */}
           <div className="right-actions">
             <button onClick={sendLike}>❤️</button>
-            <button>🎁</button>
+            <button disabled={!user}>🎁</button>
             <button>🔗</button>
           </div>
 
@@ -196,7 +216,7 @@ function App() {
                 className="floating-heart"
                 style={{
                   left: `${heart.left}%`,
-                  color: heart.color
+                  color: heart.color,
                 }}
               >
                 ❤️
@@ -209,11 +229,13 @@ function App() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Add comment..."
+              placeholder={
+                user ? "Add comment..." : "Login to comment..."
+              }
+              disabled={!user}
             />
-            <button onClick={sendMessage}>Send</button>
+            {user && <button onClick={sendMessage}>Send</button>}
           </div>
-
         </div>
       )}
     </div>
