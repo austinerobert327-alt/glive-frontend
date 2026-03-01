@@ -25,7 +25,7 @@ function App() {
   const commentRef = useRef(null);
 
   // ==========================
-  // FETCH YOUTUBE VIDEO
+  // FETCH YOUTUBE
   // ==========================
   useEffect(() => {
     const fetchVideo = async () => {
@@ -65,13 +65,13 @@ function App() {
   }, []);
 
   // ==========================
-  // REALTIME COMMENTS (LIMITED)
+  // REALTIME COMMENTS
   // ==========================
   useEffect(() => {
     const q = query(
       collection(db, "comments"),
       orderBy("createdAt", "asc"),
-      limit(50) // 🔥 Prevent Firebase overload
+      limit(50)
     );
 
     const unsub = onSnapshot(q, (snapshot) => {
@@ -112,10 +112,10 @@ function App() {
   }, [input]);
 
   // ==========================
-  // FLOATING HEARTS (LIMITED)
+  // FLOATING HEARTS
   // ==========================
   const sendLike = () => {
-    if (floatingLikes.length > 25) return; // 🔥 performance protection
+    if (floatingLikes.length > 25) return;
 
     const id = Date.now();
     const colors = ["#ff2d55", "#ff5e3a", "#ff9500", "#ff3b30", "#ff1493"];
@@ -135,18 +135,23 @@ function App() {
 
   return (
     <div className="mobile-container">
-      <div className="card">
-        {isLive && <span className="live-badge">LIVE</span>}
-        <img src={jerryImage} alt="NSPPD" />
-        <button onClick={() => setShowModal(true)}>
-          {isLive ? "Watch Live" : "Watch Latest"}
-        </button>
-      </div>
 
+      {/* PREVIEW CARD */}
+      {!showModal && (
+        <div className="card">
+          {isLive && <span className="live-badge">LIVE</span>}
+          <img src={jerryImage} alt="Live preview" />
+          <button onClick={() => setShowModal(true)}>
+            {isLive ? "Watch Live" : "Watch Latest"}
+          </button>
+        </div>
+      )}
+
+      {/* FULLSCREEN LIVE */}
       {showModal && (
         <div className="live-screen">
 
-          {/* VIDEO */}
+          {/* VIDEO FULLSCREEN */}
           <div className="video-wrapper">
             <iframe
               src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0`}
@@ -156,13 +161,31 @@ function App() {
             />
           </div>
 
-          {/* COMMENTS */}
-          <div className="comment-section" ref={commentRef}>
+          {/* TOP LEFT INFO */}
+          <div className="top-overlay">
+            {isLive && <span className="live-badge">LIVE</span>}
+            <span className="viewer-count">👁 1.2K</span>
+          </div>
+
+          {/* CLOSE BUTTON */}
+          <div className="close-btn" onClick={() => setShowModal(false)}>
+            ✕
+          </div>
+
+          {/* COMMENTS OVERLAY */}
+          <div className="comment-overlay" ref={commentRef}>
             {comments.map((c, i) => (
               <div key={i} className="comment">
                 {c.text}
               </div>
             ))}
+          </div>
+
+          {/* RIGHT ACTIONS */}
+          <div className="right-actions">
+            <button onClick={sendLike}>❤️</button>
+            <button>🎁</button>
+            <button>🔗</button>
           </div>
 
           {/* FLOATING HEARTS */}
@@ -181,20 +204,16 @@ function App() {
             ))}
           </div>
 
-          {/* BOTTOM BAR */}
-          <div className="bottom-bar">
-            <div className="input-wrapper">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Send message..."
-              />
-              <span onClick={sendMessage}>➤</span>
-            </div>
-
-            <button onClick={sendLike}>❤️</button>
-            <button>🎁</button>
+          {/* BOTTOM INPUT */}
+          <div className="bottom-input">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Add comment..."
+            />
+            <button onClick={sendMessage}>Send</button>
           </div>
+
         </div>
       )}
     </div>
