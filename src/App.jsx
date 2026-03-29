@@ -30,8 +30,8 @@ import Register from "./pages/Register";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 
-/* ✅ UPDATED BACKEND IP */
-const BACKEND_URL = "http://192.168.195.54:5000";
+/* ✅ PRODUCTION BACKEND (RENDER) */
+const BACKEND_URL = "https://glive-backend.onrender.com";
 
 const streams = [
   { id: 0, title: "NSPPD", handle: "pastorjerryeze", thumb: jerryImage },
