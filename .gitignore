@@ -1,0 +1,19 @@
+# Logs
+logs
+*.log
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# 🔥 SECRETS (VERY IMPORTANT)
+server/serviceAccountKey.json
+server/serviceAccountKey.json.json
+server/.env
+.env
+
+# Editor
+.vscode/*
+.idea
+.DS_Store

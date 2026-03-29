@@ -1,0 +1,246 @@
+/* ================= RESET ================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  background: black;
+  color: white;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+}
+
+/* ================= WATCH PAGE ================= */
+
+.watch-page {
+  padding: 12px;
+}
+
+.live-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.live-card {
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #111;
+  transition: transform 0.2s ease;
+}
+
+.live-card:hover {
+  transform: scale(1.03);
+}
+
+.live-card img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+}
+
+.live-card-title {
+  padding: 8px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* ================= LIVE VIEW (TIKTOK STYLE) ================= */
+
+/* Scroll container handled by Tailwind, keep fallback */
+.live-scroll-container {
+  height: 100vh;
+  width: 100vw;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+}
+
+/* Each video page */
+.live-stream-page {
+  height: 100vh;
+  width: 100%;
+  position: relative;
+  scroll-snap-align: start;
+  overflow: hidden;
+}
+
+/* ================= VIDEO ================= */
+
+iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  object-fit: cover;
+}
+
+/* ================= TOP BAR ================= */
+
+.top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 14px;
+  z-index: 10;
+}
+
+.top-bar span {
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  backdrop-filter: blur(6px);
+}
+
+/* ================= RIGHT SIDE (LIKE TIKTOK) ================= */
+
+.right-icons {
+  position: absolute;
+  right: 10px;
+  bottom: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  z-index: 10;
+}
+
+.right-icons button {
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  color: white;
+  font-size: 18px;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(6px);
+}
+
+.right-icons button:hover {
+  transform: scale(1.1);
+}
+
+/* ================= COMMENTS ================= */
+
+.comment-overlay {
+  position: absolute;
+  bottom: 110px;
+  left: 12px;
+  width: 70%;
+  max-height: 35%;
+  overflow-y: auto;
+  z-index: 10;
+  padding-right: 5px;
+}
+
+/* scrollbar */
+.comment-overlay::-webkit-scrollbar {
+  width: 4px;
+}
+
+.comment-overlay::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+}
+
+.comment {
+  margin-bottom: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  backdrop-filter: blur(6px);
+}
+
+/* ================= INPUT (BOTTOM BAR) ================= */
+
+.bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(to top, black, transparent);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+}
+
+.comment-form {
+  flex: 1;
+  display: flex;
+  background: white;
+  border-radius: 25px;
+  padding: 6px 10px;
+}
+
+.comment-form input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+}
+
+.comment-form button {
+  background: transparent;
+  color: black;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* ================= GIFT BUTTON ================= */
+
+.bottom-bar>button {
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* ================= GIFT PANEL ================= */
+
+.gift-panel {
+  position: absolute;
+  bottom: 90px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 12px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 20;
+  backdrop-filter: blur(10px);
+}
+
+.gift-panel button {
+  background: #222;
+  border: none;
+  padding: 8px;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gift-panel button:hover {
+  background: #333;
+  transform: scale(1.05);
+}
