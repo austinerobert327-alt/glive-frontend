@@ -8,14 +8,33 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/* 🔥 LOAD FIREBASE KEY */
-const serviceAccount = require("./serviceAccountKey.json");
+/* ================= FIREBASE (RENDER SAFE) ================= */
+
+if (!process.env.FIREBASE_KEY) {
+    console.error("❌ FIREBASE_KEY is missing in environment variables");
+    process.exit(1);
+}
+
+let serviceAccount;
+
+try {
+    serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
+} catch (err) {
+    console.error("❌ Invalid FIREBASE_KEY JSON");
+    process.exit(1);
+}
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
 });
 
 const db = admin.firestore();
+
+/* ================= HEALTH CHECK ================= */
+
+app.get("/", (req, res) => {
+    res.send("Backend is live ✅");
+});
 
 /* ================= VERIFY PAYMENT ================= */
 
@@ -48,7 +67,6 @@ app.post("/verify-payment", async (req, res) => {
 
         if (data.status === "success") {
 
-            /* 🔥 EXTRA SAFETY CHECK */
             const expectedAmount = amount * 100;
 
             if (data.amount !== expectedAmount) {
@@ -76,13 +94,15 @@ app.post("/verify-payment", async (req, res) => {
         return res.status(400).json({ success: false });
 
     } catch (err) {
-        console.error("🔥 ERROR:", err.message);
+        console.error("🔥 ERROR:", err.response?.data || err.message);
         return res.status(500).json({ error: "Verification failed" });
     }
 });
 
 /* ================= START SERVER ================= */
 
-app.listen(5000, () => {
-    console.log("🚀 Server running on port 5000");
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+    console.log("🚀 Server running on port " + PORT);
 });
