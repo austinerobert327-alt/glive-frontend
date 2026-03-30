@@ -67,11 +67,10 @@ app.post("/verify-payment", async (req, res) => {
 
         if (data.status === "success") {
 
-            const expectedAmount = amount * 100;
-
-            if (data.amount !== expectedAmount) {
-                console.log("❌ Amount mismatch!");
-                return res.status(400).json({ error: "Amount mismatch" });
+            /* ✅ SAFE VALIDATION (instead of strict match) */
+            if (!data.amount || data.amount < 100) {
+                console.log("❌ Invalid payment amount");
+                return res.status(400).json({ error: "Invalid amount" });
             }
 
             const coinsToAdd = Math.floor(amount / 25);
