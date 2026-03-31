@@ -39,17 +39,28 @@ app.get("/", (req, res) => {
 /* ================= VERIFY PAYMENT ================= */
 
 app.post("/verify-payment", async (req, res) => {
-    const { reference, userId, amount } = req.body;
-
-    console.log("📥 Incoming request:", { reference, userId, amount });
-
-    if (!reference || !userId || !amount) {
-        console.log("❌ Missing fields");
-        return res.status(400).json({ error: "Missing required fields" });
-    }
+    console.log("========== VERIFY PAYMENT START ==========");
 
     try {
-        console.log("🔍 Verifying payment with Paystack...");
+        const { reference, userId } = req.body;
+
+        console.log("📥 Incoming body:", req.body);
+
+        /* ===== VALIDATION ===== */
+
+        if (!reference) {
+            console.log("❌ No reference provided");
+            return res.status(400).json({ error: "No reference" });
+        }
+
+        if (!userId) {
+            console.log("❌ No userId provided");
+            return res.status(400).json({ error: "No userId" });
+        }
+
+        /* ===== VERIFY WITH PAYSTACK ===== */
+
+        console.log("🔍 Calling Paystack verify API...");
 
         const response = await axios.get(
             `https://api.paystack.co/transaction/verify/${reference}`,
@@ -60,41 +71,88 @@ app.post("/verify-payment", async (req, res) => {
             }
         );
 
-        const data = response.data.data;
+        console.log(
+            "📦 Full Paystack response:",
+            JSON.stringify(response.data, null, 2)
+        );
 
-        console.log("💳 Paystack status:", data.status);
-        console.log("💰 Paid amount (kobo):", data.amount);
+        const payment = response.data.data;
 
-        if (data.status === "success") {
-
-            /* ✅ SAFE VALIDATION (instead of strict match) */
-            if (!data.amount || data.amount < 100) {
-                console.log("❌ Invalid payment amount");
-                return res.status(400).json({ error: "Invalid amount" });
-            }
-
-            const coinsToAdd = Math.floor(amount / 25);
-
-            console.log("🪙 Adding coins:", coinsToAdd);
-
-            await db.collection("users").doc(userId).set(
-                {
-                    coins: admin.firestore.FieldValue.increment(coinsToAdd),
-                },
-                { merge: true }
-            );
-
-            console.log("✅ Wallet updated successfully");
-
-            return res.json({ success: true });
+        if (!payment) {
+            console.log("❌ No payment data returned");
+            return res.status(400).json({ error: "Invalid Paystack response" });
         }
 
-        console.log("❌ Payment not successful");
-        return res.status(400).json({ success: false });
+        console.log("💳 Status:", payment.status);
+        console.log("💰 Amount (kobo):", payment.amount);
 
-    } catch (err) {
-        console.error("🔥 ERROR:", err.response?.data || err.message);
-        return res.status(500).json({ error: "Verification failed" });
+        if (payment.status !== "success") {
+            console.log("❌ Payment NOT successful");
+            return res.status(400).json({ error: "Payment failed" });
+        }
+
+        /* ===== CONVERT AMOUNT ===== */
+
+        const amountNaira = payment.amount / 100;
+
+        console.log("💰 Amount (naira):", amountNaira);
+
+        /* ===== COIN LOGIC ===== */
+
+        const coinsToAdd = Math.floor(amountNaira / 25);
+
+        console.log("🪙 Coins to add:", coinsToAdd);
+
+        if (coinsToAdd <= 0) {
+            console.log("❌ Coins calculated as 0");
+            return res.status(400).json({ error: "Invalid coin calculation" });
+        }
+
+        /* ===== FIREBASE UPDATE ===== */
+
+        console.log("🔥 Updating Firebase...");
+
+        const userRef = db.collection("users").doc(userId);
+
+        const userDoc = await userRef.get();
+
+        console.log("📄 User exists:", userDoc.exists);
+
+        if (userDoc.exists) {
+            console.log("📊 Current data:", userDoc.data());
+        } else {
+            console.log("⚠️ User does not exist, will create new document");
+        }
+
+        await userRef.set(
+            {
+                coins: admin.firestore.FieldValue.increment(coinsToAdd),
+            },
+            { merge: true }
+        );
+
+        console.log("✅ Firebase update SUCCESS");
+
+        /* ===== VERIFY WRITE ===== */
+
+        const updatedDoc = await userRef.get();
+
+        console.log("🆕 Updated user data:", updatedDoc.data());
+
+        console.log("========== VERIFY PAYMENT END ==========");
+
+        return res.json({
+            success: true,
+            coinsAdded: coinsToAdd,
+            newBalance: updatedDoc.data().coins || 0,
+        });
+
+    } catch (error) {
+        console.error(
+            "🔥 ERROR:",
+            error.response?.data || error.message
+        );
+        return res.status(500).json({ error: "Server error" });
     }
 });
 
