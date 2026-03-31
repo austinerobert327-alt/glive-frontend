@@ -30,7 +30,7 @@ import Register from "./pages/Register";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 
-/* ✅ PRODUCTION BACKEND (RENDER) */
+/* ✅ PRODUCTION BACKEND */
 const BACKEND_URL = "https://glive-backend.onrender.com";
 
 const streams = [
@@ -127,7 +127,15 @@ function LiveViewer() {
 
     initializePayment(
       async (response) => {
-        console.log("✅ Payment success:", response.reference);
+        console.log("✅ Payment success FULL:", response);
+
+        const reference = response.reference;
+        const userId = user.uid;
+
+        console.log("📤 Sending to backend:", {
+          reference,
+          userId
+        });
 
         try {
           const res = await fetch(`${BACKEND_URL}/verify-payment`, {
@@ -136,17 +144,17 @@ function LiveViewer() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              reference: response.reference,
-              userId: user.uid,
-              amount: rechargeAmount,
+              reference: reference,
+              userId: userId,
             }),
           });
 
           const data = await res.json();
+
           console.log("🔥 Backend response:", data);
 
           if (data.success) {
-            alert("✅ Wallet credited!");
+            alert(`✅ Wallet credited! New balance: ${data.newBalance}`);
           } else {
             alert("❌ Verification failed");
           }
