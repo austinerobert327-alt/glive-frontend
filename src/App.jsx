@@ -29,8 +29,6 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
-
-/* ✅ PRODUCTION BACKEND */
 const BACKEND_URL = "https://glive-backend.onrender.com";
 
 const streams = [
@@ -41,8 +39,6 @@ const streams = [
   { id: 4, title: "Winners Chapel", handle: "LivingFaithChurchWorldwide", thumb: winnersImage }
 ];
 
-/* ================= WATCH PAGE ================= */
-
 function WatchPage() {
   const navigate = useNavigate();
 
@@ -50,11 +46,7 @@ function WatchPage() {
     <div className="watch-page">
       <div className="live-grid">
         {streams.map(stream => (
-          <div
-            key={stream.id}
-            className="live-card"
-            onClick={() => navigate(`/live/${stream.id}`)}
-          >
+          <div key={stream.id} className="live-card" onClick={() => navigate(`/live/${stream.id}`)}>
             <img src={stream.thumb} />
             <div className="live-card-title">{stream.title}</div>
           </div>
@@ -63,8 +55,6 @@ function WatchPage() {
     </div>
   );
 }
-
-/* ================= LIVE VIEWER ================= */
 
 function LiveViewer() {
 
@@ -90,7 +80,7 @@ function LiveViewer() {
     return onAuthStateChanged(auth, (u) => setUser(u));
   }, []);
 
-  /* ================= WALLET REALTIME ================= */
+  /* ================= WALLET ================= */
   useEffect(() => {
     if (!user) return;
 
@@ -107,15 +97,15 @@ function LiveViewer() {
     return () => unsub();
   }, [user]);
 
-  /* ================= PAYSTACK ================= */
-  const paystackConfig = {
+  /* ================= PAYSTACK SAFE ================= */
+  const paystackConfig = user ? {
     reference: new Date().getTime().toString(),
-    email: user?.email || "test@email.com",
+    email: user.email,
     amount: rechargeAmount * 100,
     publicKey: "pk_live_019365ea37124e26f8baec964658b07837520356"
-  };
+  } : null;
 
-  const initializePayment = usePaystackPayment(paystackConfig);
+  const initializePayment = paystackConfig ? usePaystackPayment(paystackConfig) : null;
 
   const rechargeWallet = () => {
     if (!user) {
@@ -123,54 +113,48 @@ function LiveViewer() {
       return navigate("/login");
     }
 
+    if (!initializePayment) {
+      alert("User not ready yet");
+      return;
+    }
+
     console.log("🚀 Starting payment...");
 
     initializePayment(
       async (response) => {
-        console.log("✅ Payment success FULL:", response);
+        console.log("✅ Payment success:", response);
 
         const reference = response.reference;
         const userId = user.uid;
 
-        console.log("📤 Sending to backend:", {
-          reference,
-          userId
-        });
+        console.log("📤 Sending:", { reference, userId });
 
         try {
           const res = await fetch(`${BACKEND_URL}/verify-payment`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              reference: reference,
-              userId: userId,
-            }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reference, userId }),
           });
 
           const data = await res.json();
-
-          console.log("🔥 Backend response:", data);
+          console.log("🔥 Backend:", data);
 
           if (data.success) {
-            alert(`✅ Wallet credited! New balance: ${data.newBalance}`);
+            alert(`✅ Wallet credited! Balance: ${data.newBalance}`);
           } else {
             alert("❌ Verification failed");
           }
 
         } catch (err) {
           console.error("❌ Backend error:", err);
-          alert("Server not reachable");
+          alert("Server error");
         }
       },
-      () => {
-        console.log("❌ Payment closed");
-      }
+      () => console.log("❌ Payment closed")
     );
   };
 
-  /* ================= FETCH VIDEOS ================= */
+  /* ================= VIDEOS ================= */
   useEffect(() => {
     const load = async () => {
       const result = {};
@@ -178,25 +162,19 @@ function LiveViewer() {
 
       for (let s of streams) {
         try {
-          const res = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${s.handle}&key=${API_KEY}`
-          );
+          const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${s.handle}&key=${API_KEY}`);
           const data = await res.json();
           const channelId = data.items?.[0]?.id?.channelId;
 
-          const videoRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=1&key=${API_KEY}`
-          );
-
+          const videoRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=1&key=${API_KEY}`);
           const videoData = await videoRes.json();
 
           if (videoData.items?.length > 0) {
             result[s.id] = videoData.items[0].id.videoId;
             viewData[s.id] = Math.floor(Math.random() * 5000) + 1000;
           }
-
         } catch (err) {
-          console.log("Video fetch error:", err);
+          console.log(err);
         }
       }
 
@@ -207,29 +185,9 @@ function LiveViewer() {
     load();
   }, []);
 
-  /* ================= SCROLL ================= */
-  useEffect(() => {
-    const handleScroll = () => {
-      const index = Math.round(
-        scrollRef.current.scrollTop / window.innerHeight
-      );
-      setActiveIndex(index);
-    };
-
-    const el = scrollRef.current;
-    el.addEventListener("scroll", handleScroll);
-
-    return () => el.removeEventListener("scroll", handleScroll);
-  }, []);
-
   /* ================= COMMENTS ================= */
   useEffect(() => {
-    const q = query(
-      collection(db, "comments"),
-      orderBy("createdAt", "asc"),
-      limit(100)
-    );
-
+    const q = query(collection(db, "comments"), orderBy("createdAt", "asc"), limit(100));
     return onSnapshot(q, (snap) => {
       setComments(snap.docs.map(d => d.data()));
     });
@@ -248,81 +206,56 @@ function LiveViewer() {
     setInput("");
   };
 
-  /* ================= GIFT ================= */
   const sendGift = async (cost) => {
     if (!user) return navigate("/login");
     if (coins < cost) return alert("Insufficient coins");
 
-    await setDoc(
-      doc(db, "users", user.uid),
-      { coins: increment(-cost) },
-      { merge: true }
-    );
+    await setDoc(doc(db, "users", user.uid), { coins: increment(-cost) }, { merge: true });
   };
 
   return (
     <div ref={scrollRef} className="live-scroll-container">
-
       {streams.map((stream, index) => (
         <div key={stream.id} className="live-stream-page">
 
           {videos[stream.id] && index === activeIndex && (
-            <iframe
-              src={`https://www.youtube.com/embed/${videos[stream.id]}?autoplay=1&mute=1`}
-              allow="autoplay"
-            />
+            <iframe src={`https://www.youtube.com/embed/${videos[stream.id]}?autoplay=1&mute=1`} allow="autoplay" />
           )}
 
-          {/* TOP */}
           <div className="top-bar">
             <span>👁 {views[stream.id] || 1000}</span>
             <span onClick={rechargeWallet}>🪙 {coins}</span>
           </div>
 
-          {/* RIGHT */}
           <div className="right-icons">
             <button>❤️</button>
             <button onClick={() => setShowGiftPanel(!showGiftPanel)}>🎁</button>
           </div>
 
-          {/* COMMENTS */}
           <div className="comment-overlay">
             {comments.map((c, i) => (
-              <div key={i} className="comment">
-                <strong>{c.username}</strong> {c.text}
-              </div>
+              <div key={i}><strong>{c.username}</strong> {c.text}</div>
             ))}
           </div>
 
-          {/* INPUT */}
           <div className="bottom-bar">
-            <div className="comment-form">
-              <input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                placeholder="Write a comment..."
-              />
-              <button onClick={sendMessage}>➤</button>
-            </div>
+            <input value={input} onChange={e => setInput(e.target.value)} />
+            <button onClick={sendMessage}>Send</button>
           </div>
 
-          {/* GIFTS */}
           {showGiftPanel && (
-            <div className="gift-panel">
-              <button onClick={() => sendGift(5)}>🌸 5</button>
-              <button onClick={() => sendGift(20)}>💎 20</button>
-              <button onClick={() => sendGift(50)}>🚀 50</button>
+            <div>
+              <button onClick={() => sendGift(5)}>5</button>
+              <button onClick={() => sendGift(20)}>20</button>
+              <button onClick={() => sendGift(50)}>50</button>
             </div>
           )}
 
         </div>
       ))}
-
     </div>
   );
 }
-
-/* ================= ROUTER ================= */
 
 export default function App() {
   return (
