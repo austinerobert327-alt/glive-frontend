@@ -61,6 +61,8 @@ function LiveViewer() {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
 
+  const userIdRef = useRef(null); // 🔥 FIX
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [videos, setVideos] = useState({});
   const [views, setViews] = useState({});
@@ -77,7 +79,14 @@ function LiveViewer() {
   /* ================= AUTH ================= */
   useEffect(() => {
     const auth = getAuth();
-    return onAuthStateChanged(auth, (u) => setUser(u));
+    return onAuthStateChanged(auth, (u) => {
+      setUser(u);
+
+      if (u) {
+        userIdRef.current = u.uid; // 🔥 LOCK USER ID
+        console.log("✅ SAVED USER ID:", u.uid);
+      }
+    });
   }, []);
 
   /* ================= WALLET ================= */
@@ -97,7 +106,7 @@ function LiveViewer() {
     return () => unsub();
   }, [user]);
 
-  /* ================= PAYSTACK SAFE ================= */
+  /* ================= PAYSTACK ================= */
   const paystackConfig = user ? {
     reference: new Date().getTime().toString(),
     email: user.email,
@@ -107,22 +116,17 @@ function LiveViewer() {
 
   const initializePayment = paystackConfig ? usePaystackPayment(paystackConfig) : null;
 
-  /* ================= FIXED PAYMENT ================= */
+  /* ================= FINAL FIX ================= */
   const rechargeWallet = () => {
-    if (!user) {
-      alert("Login first");
+
+    if (!userIdRef.current) {
+      alert("User not ready");
       return navigate("/login");
     }
 
-    // 🔥 LOCK USER ID BEFORE PAYMENT
-    const userId = user.uid;
+    const userId = userIdRef.current; // 🔥 ALWAYS CORRECT
 
-    if (!userId) {
-      alert("User not ready");
-      return;
-    }
-
-    console.log("👤 LOCKED USER ID:", userId);
+    console.log("👤 USING LOCKED USER ID:", userId);
 
     if (!initializePayment) {
       alert("Payment not ready");
@@ -147,7 +151,7 @@ function LiveViewer() {
             },
             body: JSON.stringify({
               reference,
-              userId, // ✅ locked ID
+              userId,
             }),
           });
 
