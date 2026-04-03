@@ -107,14 +107,25 @@ function LiveViewer() {
 
   const initializePayment = paystackConfig ? usePaystackPayment(paystackConfig) : null;
 
+  /* ================= FIXED PAYMENT ================= */
   const rechargeWallet = () => {
     if (!user) {
       alert("Login first");
       return navigate("/login");
     }
 
+    // 🔥 LOCK USER ID BEFORE PAYMENT
+    const userId = user.uid;
+
+    if (!userId) {
+      alert("User not ready");
+      return;
+    }
+
+    console.log("👤 LOCKED USER ID:", userId);
+
     if (!initializePayment) {
-      alert("User not ready yet");
+      alert("Payment not ready");
       return;
     }
 
@@ -125,18 +136,23 @@ function LiveViewer() {
         console.log("✅ Payment success:", response);
 
         const reference = response.reference;
-        const userId = user.uid;
 
         console.log("📤 Sending:", { reference, userId });
 
         try {
           const res = await fetch(`${BACKEND_URL}/verify-payment`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ reference, userId }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              reference,
+              userId, // ✅ locked ID
+            }),
           });
 
           const data = await res.json();
+
           console.log("🔥 Backend:", data);
 
           if (data.success) {
