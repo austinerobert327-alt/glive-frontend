@@ -62,10 +62,8 @@ function LiveViewer() {
 
   const userIdRef = useRef(null);
 
-  const [activeIndex, setActiveIndex] = useState(0);
   const [videos, setVideos] = useState({});
   const [views, setViews] = useState({});
-
   const [user, setUser] = useState(null);
   const [coins, setCoins] = useState(0);
 
@@ -80,7 +78,6 @@ function LiveViewer() {
     const auth = getAuth();
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
-
       if (u) {
         userIdRef.current = u.uid;
         console.log("✅ USER ID LOCKED:", u.uid);
@@ -110,12 +107,12 @@ function LiveViewer() {
     reference: new Date().getTime().toString(),
     email: user.email,
     amount: rechargeAmount * 100,
-    publicKey: "pk_live_019365ea37124e26f8baec964658b07837520356"
+    publicKey: "pk_test_xxxxxxxxxxxxxxxxxxxxx" // 🔥 USE TEST KEY FIRST
   } : null;
 
   const initializePayment = paystackConfig ? usePaystackPayment(paystackConfig) : null;
 
-  /* ================= PAYMENT ================= */
+  /* ================= FIXED PAYMENT ================= */
   const rechargeWallet = () => {
 
     if (!userIdRef.current) {
@@ -132,11 +129,13 @@ function LiveViewer() {
 
     console.log("🚀 Starting payment for:", userId);
 
-    initializePayment(
-      async (response) => {
+    initializePayment({
+      onSuccess: async (response) => {
         console.log("✅ Payment success:", response);
 
         try {
+          console.log("🌍 Calling backend now...");
+
           const res = await fetch(`${BACKEND_URL}/verify-payment`, {
             method: "POST",
             headers: {
@@ -158,7 +157,7 @@ function LiveViewer() {
           }
 
           if (data.success) {
-            alert(`✅ Wallet credited! New balance: ${data.coins}`);
+            alert(`✅ Wallet credited! Balance: ${data.coins}`);
           } else {
             alert("❌ Payment verification failed");
           }
@@ -168,8 +167,11 @@ function LiveViewer() {
           alert("Server error");
         }
       },
-      () => console.log("❌ Payment closed")
-    );
+
+      onClose: () => {
+        console.log("❌ Payment closed");
+      }
+    });
   };
 
   /* ================= COMMENTS ================= */
@@ -202,12 +204,8 @@ function LiveViewer() {
 
   return (
     <div ref={scrollRef} className="live-scroll-container">
-      {streams.map((stream, index) => (
+      {streams.map((stream) => (
         <div key={stream.id} className="live-stream-page">
-
-          {videos[stream.id] && index === activeIndex && (
-            <iframe src={`https://www.youtube.com/embed/${videos[stream.id]}?autoplay=1&mute=1`} allow="autoplay" />
-          )}
 
           <div className="top-bar">
             <span>👁 {views[stream.id] || 1000}</span>
