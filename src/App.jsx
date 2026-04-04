@@ -57,11 +57,10 @@ function WatchPage() {
 }
 
 function LiveViewer() {
-
   const navigate = useNavigate();
   const scrollRef = useRef(null);
 
-  const userIdRef = useRef(null); // 🔥 FIX
+  const userIdRef = useRef(null);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [videos, setVideos] = useState({});
@@ -83,8 +82,8 @@ function LiveViewer() {
       setUser(u);
 
       if (u) {
-        userIdRef.current = u.uid; // 🔥 LOCK USER ID
-        console.log("✅ SAVED USER ID:", u.uid);
+        userIdRef.current = u.uid;
+        console.log("✅ USER ID LOCKED:", u.uid);
       }
     });
   }, []);
@@ -116,7 +115,7 @@ function LiveViewer() {
 
   const initializePayment = paystackConfig ? usePaystackPayment(paystackConfig) : null;
 
-  /* ================= FINAL FIX ================= */
+  /* ================= PAYMENT ================= */
   const rechargeWallet = () => {
 
     if (!userIdRef.current) {
@@ -124,24 +123,18 @@ function LiveViewer() {
       return navigate("/login");
     }
 
-    const userId = userIdRef.current; // 🔥 ALWAYS CORRECT
-
-    console.log("👤 USING LOCKED USER ID:", userId);
+    const userId = userIdRef.current;
 
     if (!initializePayment) {
       alert("Payment not ready");
       return;
     }
 
-    console.log("🚀 Starting payment...");
+    console.log("🚀 Starting payment for:", userId);
 
     initializePayment(
       async (response) => {
         console.log("✅ Payment success:", response);
-
-        const reference = response.reference;
-
-        console.log("📤 Sending:", { reference, userId });
 
         try {
           const res = await fetch(`${BACKEND_URL}/verify-payment`, {
@@ -150,19 +143,24 @@ function LiveViewer() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              reference,
+              reference: response.reference,
               userId,
             }),
           });
 
           const data = await res.json();
 
-          console.log("🔥 Backend:", data);
+          console.log("🔥 Backend response:", data);
+
+          if (!res.ok) {
+            alert(`❌ Error: ${data.error || "Verification failed"}`);
+            return;
+          }
 
           if (data.success) {
-            alert(`✅ Wallet credited! Balance: ${data.newBalance}`);
+            alert(`✅ Wallet credited! New balance: ${data.coins}`);
           } else {
-            alert("❌ Verification failed");
+            alert("❌ Payment verification failed");
           }
 
         } catch (err) {
@@ -173,37 +171,6 @@ function LiveViewer() {
       () => console.log("❌ Payment closed")
     );
   };
-
-  /* ================= VIDEOS ================= */
-  useEffect(() => {
-    const load = async () => {
-      const result = {};
-      const viewData = {};
-
-      for (let s of streams) {
-        try {
-          const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${s.handle}&key=${API_KEY}`);
-          const data = await res.json();
-          const channelId = data.items?.[0]?.id?.channelId;
-
-          const videoRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=1&key=${API_KEY}`);
-          const videoData = await videoRes.json();
-
-          if (videoData.items?.length > 0) {
-            result[s.id] = videoData.items[0].id.videoId;
-            viewData[s.id] = Math.floor(Math.random() * 5000) + 1000;
-          }
-        } catch (err) {
-          console.log(err);
-        }
-      }
-
-      setVideos(result);
-      setViews(viewData);
-    };
-
-    load();
-  }, []);
 
   /* ================= COMMENTS ================= */
   useEffect(() => {
