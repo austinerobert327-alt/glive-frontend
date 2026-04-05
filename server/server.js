@@ -30,6 +30,14 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
+/* ================= PAYSTACK CHECK ================= */
+
+if (!process.env.PAYSTACK_SECRET_KEY) {
+    console.error("❌ PAYSTACK_SECRET_KEY is missing in environment variables");
+} else {
+    console.log("✅ Paystack key loaded");
+}
+
 /* ================= HEALTH CHECK ================= */
 
 app.get("/", (req, res) => {
@@ -71,10 +79,7 @@ app.post("/verify-payment", async (req, res) => {
             }
         );
 
-        console.log(
-            "📦 Full Paystack response:",
-            JSON.stringify(response.data, null, 2)
-        );
+        console.log("📦 Paystack response:", response.data);
 
         const payment = response.data.data;
 
@@ -94,13 +99,11 @@ app.post("/verify-payment", async (req, res) => {
         /* ===== CONVERT AMOUNT ===== */
 
         const amountNaira = payment.amount / 100;
-
         console.log("💰 Amount (naira):", amountNaira);
 
         /* ===== COIN LOGIC ===== */
 
         const coinsToAdd = Math.floor(amountNaira / 25);
-
         console.log("🪙 Coins to add:", coinsToAdd);
 
         if (coinsToAdd <= 0) {
@@ -117,12 +120,6 @@ app.post("/verify-payment", async (req, res) => {
         const userDoc = await userRef.get();
 
         console.log("📄 User exists:", userDoc.exists);
-
-        if (userDoc.exists) {
-            console.log("📊 Current data:", userDoc.data());
-        } else {
-            console.log("⚠️ User does not exist, will create new document");
-        }
 
         await userRef.set(
             {
@@ -143,16 +140,17 @@ app.post("/verify-payment", async (req, res) => {
 
         return res.json({
             success: true,
-            coinsAdded: coinsToAdd,
-            newBalance: updatedDoc.data().coins || 0,
+            coins: updatedDoc.data().coins || 0,
         });
 
     } catch (error) {
-        console.error(
-            "🔥 ERROR:",
-            error.response?.data || error.message
-        );
-        return res.status(500).json({ error: "Server error" });
+        console.log("❌ FULL ERROR:", error);
+        console.log("❌ RESPONSE ERROR:", error.response?.data);
+        console.log("❌ MESSAGE:", error.message);
+
+        return res.status(500).json({
+            error: error.response?.data || error.message,
+        });
     }
 });
 
