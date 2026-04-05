@@ -59,18 +59,14 @@ function WatchPage() {
 function LiveViewer() {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
-
   const userIdRef = useRef(null);
 
-  const [videos, setVideos] = useState({});
-  const [views, setViews] = useState({});
   const [user, setUser] = useState(null);
   const [coins, setCoins] = useState(0);
-
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState("");
-
   const [showGiftPanel, setShowGiftPanel] = useState(false);
+
   const rechargeAmount = 1000;
 
   /* ================= AUTH ================= */
@@ -107,12 +103,12 @@ function LiveViewer() {
     reference: new Date().getTime().toString(),
     email: user.email,
     amount: rechargeAmount * 100,
-    publicKey: "pk_test_xxxxxxxxxxxxxxxxxxxxx" // 🔥 USE TEST KEY FIRST
+    publicKey: "pk_test_dcebea1526de525bb679f8a4379e3324b239475d"
   } : null;
 
   const initializePayment = paystackConfig ? usePaystackPayment(paystackConfig) : null;
 
-  /* ================= FIXED PAYMENT ================= */
+  /* ================= PAYMENT ================= */
   const rechargeWallet = () => {
 
     if (!userIdRef.current) {
@@ -128,6 +124,7 @@ function LiveViewer() {
     }
 
     console.log("🚀 Starting payment for:", userId);
+    console.log("PAYSTACK CONFIG:", paystackConfig);
 
     initializePayment({
       onSuccess: async (response) => {
@@ -152,14 +149,14 @@ function LiveViewer() {
           console.log("🔥 Backend response:", data);
 
           if (!res.ok) {
-            alert(`❌ Error: ${data.error || "Verification failed"}`);
+            alert(`❌ Error: ${data.error}`);
             return;
           }
 
           if (data.success) {
             alert(`✅ Wallet credited! Balance: ${data.coins}`);
           } else {
-            alert("❌ Payment verification failed");
+            alert("❌ Verification failed");
           }
 
         } catch (err) {
@@ -208,7 +205,6 @@ function LiveViewer() {
         <div key={stream.id} className="live-stream-page">
 
           <div className="top-bar">
-            <span>👁 {views[stream.id] || 1000}</span>
             <span onClick={rechargeWallet}>🪙 {coins}</span>
           </div>
 
