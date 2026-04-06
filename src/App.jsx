@@ -31,6 +31,9 @@ import Register from "./pages/Register";
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const BACKEND_URL = "https://glive-backend.onrender.com";
 
+// Define Paystack key separately to fix TS ',' error
+const PAYSTACK_PUBLIC_KEY = String(import.meta.env.VITE_PAYSTACK_PUBLIC_KEY);
+
 const streams = [
   { id: 0, title: "NSPPD", handle: "pastorjerryeze", thumb: jerryImage },
   { id: 1, title: "Hallelujah Challenge", handle: "NathanielBasseyMusic", thumb: hallelujahImage },
@@ -47,7 +50,7 @@ function WatchPage() {
       <div className="live-grid">
         {streams.map(stream => (
           <div key={stream.id} className="live-card" onClick={() => navigate(`/live/${stream.id}`)}>
-            <img src={stream.thumb} />
+            <img src={stream.thumb} alt={stream.title} />
             <div className="live-card-title">{stream.title}</div>
           </div>
         ))}
@@ -99,18 +102,21 @@ function LiveViewer() {
   }, [user]);
 
   /* ================= PAYSTACK ================= */
-  const paystackConfig = user ? {
-    reference: new Date().getTime().toString(),
-    email: user.email,
-    amount: rechargeAmount * 100,
-    publicKey: "pk_live_019365ea37124e26f8baec964658b07837520356"
-  } : null;
+  const paystackConfig = user
+    ? {
+      reference: new Date().getTime().toString(),
+      email: user.email,
+      amount: rechargeAmount * 100,
+      publicKey: PAYSTACK_PUBLIC_KEY,
+    }
+    : null;
+
+  console.log("🔥 Initializing Paystack with key:", paystackConfig?.publicKey);
 
   const initializePayment = paystackConfig ? usePaystackPayment(paystackConfig) : null;
 
   /* ================= PAYMENT ================= */
   const rechargeWallet = () => {
-
     if (!userIdRef.current) {
       alert("User not ready");
       return navigate("/login");
@@ -124,7 +130,15 @@ function LiveViewer() {
     }
 
     console.log("🚀 Starting payment for:", userId);
-    console.log("PAYSTACK CONFIG:", paystackConfig);
+    console.log("🚀 PAYSTACK PUBLIC KEY:", paystackConfig.publicKey);
+
+    if (paystackConfig.publicKey.startsWith("pk_test")) {
+      console.log("🧪 FRONTEND IN TEST MODE");
+    } else if (paystackConfig.publicKey.startsWith("pk_live")) {
+      console.log("🚀 FRONTEND IN LIVE MODE");
+    } else {
+      console.log("⚠️ UNKNOWN KEY FORMAT");
+    }
 
     initializePayment({
       onSuccess: async (response) => {
@@ -168,7 +182,7 @@ function LiveViewer() {
       onClose: () => {
         console.log("❌ Payment closed");
       }
-    );
+    });
   };
 
   /* ================= COMMENTS ================= */
