@@ -35,7 +35,18 @@ const db = admin.firestore();
 if (!process.env.PAYSTACK_SECRET_KEY) {
     console.error("❌ PAYSTACK_SECRET_KEY is missing in environment variables");
 } else {
+    const key = process.env.PAYSTACK_SECRET_KEY;
+
     console.log("✅ Paystack key loaded");
+
+    // 🔥 SAFE DEBUG (only prefix)
+    if (key.startsWith("sk_test")) {
+        console.log("🧪 MODE: TEST MODE (sk_test)");
+    } else if (key.startsWith("sk_live")) {
+        console.log("🚀 MODE: LIVE MODE (sk_live)");
+    } else {
+        console.log("⚠️ UNKNOWN PAYSTACK KEY FORMAT");
+    }
 }
 
 /* ================= HEALTH CHECK ================= */
@@ -54,6 +65,16 @@ app.post("/verify-payment", async (req, res) => {
 
         console.log("📥 Incoming body:", req.body);
 
+        // 🔥 PRINT CURRENT MODE EVERY REQUEST
+        const key = process.env.PAYSTACK_SECRET_KEY || "";
+        if (key.startsWith("sk_test")) {
+            console.log("🧪 Using TEST SECRET KEY");
+        } else if (key.startsWith("sk_live")) {
+            console.log("🚀 Using LIVE SECRET KEY");
+        } else {
+            console.log("⚠️ Unknown key being used");
+        }
+
         /* ===== VALIDATION ===== */
 
         if (!reference) {
@@ -69,6 +90,7 @@ app.post("/verify-payment", async (req, res) => {
         /* ===== VERIFY WITH PAYSTACK ===== */
 
         console.log("🔍 Calling Paystack verify API...");
+        console.log(`🔗 Reference: ${reference}`);
 
         const response = await axios.get(
             `https://api.paystack.co/transaction/verify/${reference}`,
@@ -79,7 +101,7 @@ app.post("/verify-payment", async (req, res) => {
             }
         );
 
-        console.log("📦 Paystack response:", response.data);
+        console.log("📦 Paystack FULL response:", JSON.stringify(response.data, null, 2));
 
         const payment = response.data.data;
 
@@ -90,6 +112,8 @@ app.post("/verify-payment", async (req, res) => {
 
         console.log("💳 Status:", payment.status);
         console.log("💰 Amount (kobo):", payment.amount);
+        console.log("🌍 Currency:", payment.currency);
+        console.log("🧾 Gateway response:", payment.gateway_response);
 
         if (payment.status !== "success") {
             console.log("❌ Payment NOT successful");
