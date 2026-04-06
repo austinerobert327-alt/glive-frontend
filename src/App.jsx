@@ -103,7 +103,7 @@ function LiveViewer() {
     reference: new Date().getTime().toString(),
     email: user.email,
     amount: rechargeAmount * 100,
-    publicKey: "pk_test_dcebea1526de525bb679f8a4379e3324b239475d"
+    publicKey: "pk_live_019365ea37124e26f8baec964658b07837520356"
   } : null;
 
   const initializePayment = paystackConfig ? usePaystackPayment(paystackConfig) : null;
@@ -168,7 +168,7 @@ function LiveViewer() {
       onClose: () => {
         console.log("❌ Payment closed");
       }
-    });
+    );
   };
 
   /* ================= COMMENTS ================= */
