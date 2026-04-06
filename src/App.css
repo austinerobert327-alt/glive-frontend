@@ -17,7 +17,6 @@ body,
 }
 
 /* ================= WATCH PAGE ================= */
-
 .watch-page {
   padding: 12px;
 }
@@ -53,8 +52,6 @@ body,
 }
 
 /* ================= LIVE VIEW (TIKTOK STYLE) ================= */
-
-/* Scroll container handled by Tailwind, keep fallback */
 .live-scroll-container {
   height: 100vh;
   width: 100vw;
@@ -62,7 +59,6 @@ body,
   scroll-snap-type: y mandatory;
 }
 
-/* Each video page */
 .live-stream-page {
   height: 100vh;
   width: 100%;
@@ -72,7 +68,6 @@ body,
 }
 
 /* ================= VIDEO ================= */
-
 iframe {
   position: absolute;
   top: 0;
@@ -84,7 +79,6 @@ iframe {
 }
 
 /* ================= TOP BAR ================= */
-
 .top-bar {
   position: absolute;
   top: 0;
@@ -105,7 +99,6 @@ iframe {
 }
 
 /* ================= RIGHT SIDE (LIKE TIKTOK) ================= */
-
 .right-icons {
   position: absolute;
   right: 10px;
@@ -134,7 +127,6 @@ iframe {
 }
 
 /* ================= COMMENTS ================= */
-
 .comment-overlay {
   position: absolute;
   bottom: 110px;
@@ -146,7 +138,6 @@ iframe {
   padding-right: 5px;
 }
 
-/* scrollbar */
 .comment-overlay::-webkit-scrollbar {
   width: 4px;
 }
@@ -166,7 +157,6 @@ iframe {
 }
 
 /* ================= INPUT (BOTTOM BAR) ================= */
-
 .bottom-bar {
   position: absolute;
   bottom: 0;
@@ -180,30 +170,16 @@ iframe {
   z-index: 10;
 }
 
-.comment-form {
-  flex: 1;
-  display: flex;
-  background: white;
-  border-radius: 25px;
-  padding: 6px 10px;
-}
-
-.comment-form input {
+.bottom-bar>input {
   flex: 1;
   border: none;
   outline: none;
   font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
 }
-
-.comment-form button {
-  background: transparent;
-  color: black;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-/* ================= GIFT BUTTON ================= */
 
 .bottom-bar>button {
   background: rgba(0, 0, 0, 0.6);
@@ -215,7 +191,6 @@ iframe {
 }
 
 /* ================= GIFT PANEL ================= */
-
 .gift-panel {
   position: absolute;
   bottom: 90px;
@@ -228,6 +203,16 @@ iframe {
   gap: 10px;
   z-index: 20;
   backdrop-filter: blur(10px);
+
+  /* ANIMATION */
+  transform: translateY(100%);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.gift-panel.show {
+  transform: translateY(0%);
+  opacity: 1;
 }
 
 .gift-panel button {
@@ -243,4 +228,29 @@ iframe {
 .gift-panel button:hover {
   background: #333;
   transform: scale(1.05);
+}
+
+/* ================= GIFT FLYING ANIMATION ================= */
+.gift-animation {
+  position: absolute;
+  font-size: 24px;
+  animation: flyGift 1s ease forwards;
+  z-index: 30;
+}
+
+@keyframes flyGift {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: translateY(-120px) scale(1.3);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateY(-200px) scale(1);
+    opacity: 0;
+  }
 }

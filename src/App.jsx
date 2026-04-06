@@ -30,8 +30,6 @@ import Register from "./pages/Register";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const BACKEND_URL = "https://glive-backend.onrender.com";
-
-// Define Paystack key separately to fix TS ',' error
 const PAYSTACK_PUBLIC_KEY = String(import.meta.env.VITE_PAYSTACK_PUBLIC_KEY);
 
 const streams = [
@@ -44,7 +42,6 @@ const streams = [
 
 function WatchPage() {
   const navigate = useNavigate();
-
   return (
     <div className="watch-page">
       <div className="live-grid">
@@ -63,6 +60,7 @@ function LiveViewer() {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
   const userIdRef = useRef(null);
+  const giftContainerRef = useRef(null);
 
   const [user, setUser] = useState(null);
   const [coins, setCoins] = useState(0);
@@ -77,10 +75,7 @@ function LiveViewer() {
     const auth = getAuth();
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
-      if (u) {
-        userIdRef.current = u.uid;
-        console.log("✅ USER ID LOCKED:", u.uid);
-      }
+      if (u) userIdRef.current = u.uid;
     });
   }, []);
 
@@ -89,13 +84,9 @@ function LiveViewer() {
     if (!user) return;
 
     const ref = doc(db, "users", user.uid);
-
     const unsub = onSnapshot(ref, (snap) => {
-      if (snap.exists()) {
-        setCoins(snap.data().coins || 0);
-      } else {
-        setDoc(ref, { email: user.email, coins: 0 });
-      }
+      if (snap.exists()) setCoins(snap.data().coins || 0);
+      else setDoc(ref, { email: user.email, coins: 0 });
     });
 
     return () => unsub();
@@ -111,86 +102,37 @@ function LiveViewer() {
     }
     : null;
 
-  console.log("🔥 Initializing Paystack with key:", paystackConfig?.publicKey);
-
   const initializePayment = paystackConfig ? usePaystackPayment(paystackConfig) : null;
 
-  /* ================= PAYMENT ================= */
   const rechargeWallet = () => {
-    if (!userIdRef.current) {
-      alert("User not ready");
-      return navigate("/login");
-    }
-
-    const userId = userIdRef.current;
-
-    if (!initializePayment) {
-      alert("Payment not ready");
-      return;
-    }
-
-    console.log("🚀 Starting payment for:", userId);
-    console.log("🚀 PAYSTACK PUBLIC KEY:", paystackConfig.publicKey);
-
-    if (paystackConfig.publicKey.startsWith("pk_test")) {
-      console.log("🧪 FRONTEND IN TEST MODE");
-    } else if (paystackConfig.publicKey.startsWith("pk_live")) {
-      console.log("🚀 FRONTEND IN LIVE MODE");
-    } else {
-      console.log("⚠️ UNKNOWN KEY FORMAT");
-    }
+    if (!userIdRef.current) return navigate("/login");
+    if (!initializePayment) return;
 
     initializePayment({
       onSuccess: async (response) => {
-        console.log("✅ Payment success:", response);
-
         try {
-          console.log("🌍 Calling backend now...");
-
           const res = await fetch(`${BACKEND_URL}/verify-payment`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              reference: response.reference,
-              userId,
-            }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reference: response.reference, userId: userIdRef.current }),
           });
 
           const data = await res.json();
-
-          console.log("🔥 Backend response:", data);
-
-          if (!res.ok) {
-            alert(`❌ Error: ${data.error}`);
-            return;
-          }
-
-          if (data.success) {
-            alert(`✅ Wallet credited! Balance: ${data.coins}`);
-          } else {
-            alert("❌ Verification failed");
-          }
-
-        } catch (err) {
-          console.error("❌ Backend error:", err);
+          if (!res.ok) alert(`❌ Error: ${data.error}`);
+          else if (data.success) alert(`✅ Wallet credited! Balance: ${data.coins}`);
+          else alert("❌ Verification failed");
+        } catch {
           alert("Server error");
         }
       },
-
-      onClose: () => {
-        console.log("❌ Payment closed");
-      }
+      onClose: () => console.log("Payment closed"),
     });
   };
 
   /* ================= COMMENTS ================= */
   useEffect(() => {
     const q = query(collection(db, "comments"), orderBy("createdAt", "asc"), limit(100));
-    return onSnapshot(q, (snap) => {
-      setComments(snap.docs.map(d => d.data()));
-    });
+    return onSnapshot(q, (snap) => setComments(snap.docs.map(d => d.data())));
   }, []);
 
   const sendMessage = async () => {
@@ -202,19 +144,51 @@ function LiveViewer() {
       username: user.email,
       createdAt: serverTimestamp()
     });
-
     setInput("");
+  };
+
+  /* ================= GIFT LOGIC ================= */
+  const triggerGiftAnimation = (cost) => {
+    if (!giftContainerRef.current) return;
+    const giftEl = document.createElement("div");
+    giftEl.className = "gift-animation";
+    giftEl.innerText = `🎁 x${cost}`;
+    giftContainerRef.current.appendChild(giftEl);
+
+    giftEl.style.left = `${Math.random() * 80 + 10}%`;
+
+    giftEl.animate(
+      [
+        { transform: "translateY(0)", opacity: 1 },
+        { transform: "translateY(-200px)", opacity: 0 }
+      ],
+      { duration: 2000, easing: "ease-out" }
+    );
+
+    setTimeout(() => giftEl.remove(), 2000);
   };
 
   const sendGift = async (cost) => {
     if (!user) return navigate("/login");
     if (coins < cost) return alert("Insufficient coins");
 
-    await setDoc(doc(db, "users", user.uid), { coins: increment(-cost) }, { merge: true });
+    try {
+      await setDoc(doc(db, "users", user.uid), { coins: increment(-cost) }, { merge: true });
+      await addDoc(collection(db, "gifts"), {
+        userId: user.uid,
+        cost,
+        timestamp: serverTimestamp(),
+      });
+      triggerGiftAnimation(cost);
+    } catch (err) {
+      alert("Error sending gift");
+      console.error(err);
+    }
   };
 
   return (
     <div ref={scrollRef} className="live-scroll-container">
+      <div ref={giftContainerRef} className="gift-animation-container"></div>
       {streams.map((stream) => (
         <div key={stream.id} className="live-stream-page">
 
@@ -238,13 +212,12 @@ function LiveViewer() {
             <button onClick={sendMessage}>Send</button>
           </div>
 
-          {showGiftPanel && (
-            <div>
-              <button onClick={() => sendGift(5)}>5</button>
-              <button onClick={() => sendGift(20)}>20</button>
-              <button onClick={() => sendGift(50)}>50</button>
-            </div>
-          )}
+          {/* ================= GIFT PANEL ================= */}
+          <div className={`gift-panel ${showGiftPanel ? "slide-in" : "slide-out"}`}>
+            <button onClick={() => sendGift(5)}>5</button>
+            <button onClick={() => sendGift(20)}>20</button>
+            <button onClick={() => sendGift(50)}>50</button>
+          </div>
 
         </div>
       ))}
