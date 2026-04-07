@@ -8,7 +8,7 @@ import dunamisImage from "./assets/dunamis.jpg";
 import rccgImage from "./assets/rccg.jpg";
 import winnersImage from "./assets/winners.jpg";
 
-import giftSound from "./assets/gift.mp3"; // 🔥 ADD SOUND FILE
+import giftSound from "./assets/gift.mp3";
 
 import { db } from "./firebase";
 import {
@@ -33,7 +33,7 @@ import Register from "./pages/Register";
 const BACKEND_URL = "https://glive-backend.onrender.com";
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
 
-/* 🔥 ADD YOUR YOUTUBE LIVE IDS HERE */
+/* STREAM DATA */
 const streams = [
   { id: 0, title: "NSPPD", videoId: "5Yc9g5dGqK0", thumb: jerryImage },
   { id: 1, title: "Hallelujah", videoId: "hHW1oY26kxQ", thumb: hallelujahImage },
@@ -42,6 +42,7 @@ const streams = [
   { id: 4, title: "Winners", videoId: "ScMzIvxBSi4", thumb: winnersImage }
 ];
 
+/* ================= WATCH PAGE ================= */
 function WatchPage() {
   const navigate = useNavigate();
 
@@ -59,12 +60,14 @@ function WatchPage() {
   );
 }
 
+/* ================= LIVE VIEW ================= */
 function LiveViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const stream = streams.find(s => s.id === Number(id));
+
   const userIdRef = useRef(null);
-  const giftContainerRef = useRef(null);
   const audioRef = useRef(null);
 
   const [user, setUser] = useState(null);
@@ -72,10 +75,11 @@ function LiveViewer() {
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState("");
   const [showGiftPanel, setShowGiftPanel] = useState(false);
+  const [muted, setMuted] = useState(true);
 
   const rechargeAmount = 1000;
 
-  /* ================= AUTH ================= */
+  /* AUTH */
   useEffect(() => {
     const auth = getAuth();
     return onAuthStateChanged(auth, (u) => {
@@ -84,7 +88,7 @@ function LiveViewer() {
     });
   }, []);
 
-  /* ================= WALLET ================= */
+  /* WALLET */
   useEffect(() => {
     if (!user) return;
 
@@ -95,9 +99,9 @@ function LiveViewer() {
     });
   }, [user]);
 
-  /* ================= COMMENTS ================= */
+  /* COMMENTS */
   useEffect(() => {
-    const q = query(collection(db, "comments"), orderBy("createdAt"), limit(100));
+    const q = query(collection(db, "comments"), orderBy("createdAt"), limit(50));
     return onSnapshot(q, (snap) => {
       setComments(snap.docs.map(d => d.data()));
     });
@@ -116,7 +120,7 @@ function LiveViewer() {
     setInput("");
   };
 
-  /* ================= PAYSTACK ================= */
+  /* PAYSTACK */
   const paystackConfig = user
     ? {
       reference: new Date().getTime().toString(),
@@ -142,20 +146,20 @@ function LiveViewer() {
     });
   };
 
-  /* ================= GIFT ================= */
+  /* GIFT */
   const triggerGiftAnimation = (cost) => {
     const el = document.createElement("div");
-    el.className = "gift-animation";
+    el.className = "gift-center";
     el.innerText = `🎁 x${cost}`;
+    document.body.appendChild(el);
 
-    giftContainerRef.current.appendChild(el);
+    audioRef.current?.play().catch(() => { });
 
-    audioRef.current.play(); // 🔥 PLAY SOUND
-
-    setTimeout(() => el.remove(), 1000);
+    setTimeout(() => el.remove(), 1500);
   };
 
   const sendGift = async (cost) => {
+    if (!user) return navigate("/login");
     if (coins < cost) return alert("Insufficient coins");
 
     await setDoc(doc(db, "users", user.uid), {
@@ -167,69 +171,63 @@ function LiveViewer() {
   };
 
   return (
-    <div className="live-scroll-container">
+    <div className="live-container">
 
       <audio ref={audioRef} src={giftSound} />
 
-      {streams.map((stream) => (
-        <div key={stream.id} className="live-stream-page">
+      {/* VIDEO */}
+      <iframe
+        src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=${muted ? 1 : 0}`}
+        allow="autoplay"
+      />
 
-          {/* VIDEO */}
-          <iframe
-            src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=1`}
-            allow="autoplay"
-          />
+      {/* TOP */}
+      <div className="top-bar">
+        <span onClick={rechargeWallet}>🪙 {coins}</span>
+      </div>
 
-          {/* GIFT ANIMATION */}
-          <div ref={giftContainerRef} className="gift-animation-container"></div>
+      {/* RIGHT */}
+      <div className="right-icons">
+        <button onClick={() => setMuted(!muted)}>
+          {muted ? "🔇" : "🔊"}
+        </button>
+        <button onClick={() => setShowGiftPanel(true)}>🎁</button>
+      </div>
 
-          {/* TOP */}
-          <div className="top-bar">
-            <span onClick={rechargeWallet}>🪙 {coins}</span>
+      {/* COMMENTS */}
+      <div className="comment-overlay">
+        {comments.map((c, i) => (
+          <div key={i} className="comment">
+            <strong>{c.username}</strong> {c.text}
           </div>
+        ))}
+      </div>
 
-          {/* RIGHT */}
-          <div className="right-icons">
-            <button>❤️</button>
-            <button onClick={() => setShowGiftPanel(true)}>🎁</button>
-          </div>
+      {/* INPUT */}
+      <div className="bottom-bar">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Comment..."
+        />
+        <button onClick={sendMessage}>➤</button>
+      </div>
 
-          {/* COMMENTS */}
-          <div className="comment-overlay">
-            {comments.map((c, i) => (
-              <div key={i} className="comment">
-                <strong>{c.username}</strong> {c.text}
-              </div>
-            ))}
-          </div>
-
-          {/* INPUT */}
-          <div className="bottom-bar">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Comment..."
-            />
-            <button onClick={sendMessage}>Send</button>
-          </div>
-
-          {/* GIFT MODAL */}
-          <div className={`gift-modal ${showGiftPanel ? "active" : ""}`}>
-            <div className="gift-grid">
-              <div onClick={() => sendGift(5)}>🎁 5</div>
-              <div onClick={() => sendGift(20)}>💎 20</div>
-              <div onClick={() => sendGift(50)}>🏆 50</div>
-            </div>
-            <button onClick={() => setShowGiftPanel(false)}>Close</button>
-          </div>
-
+      {/* GIFT MODAL */}
+      <div className={`gift-modal ${showGiftPanel ? "active" : ""}`}>
+        <div className="gift-grid">
+          <div onClick={() => sendGift(5)}>🎁 5</div>
+          <div onClick={() => sendGift(20)}>💎 20</div>
+          <div onClick={() => sendGift(50)}>🏆 50</div>
         </div>
-      ))}
+        <button onClick={() => setShowGiftPanel(false)}>Close</button>
+      </div>
 
     </div>
   );
 }
 
+/* ================= ROUTES ================= */
 export default function App() {
   return (
     <Routes>
