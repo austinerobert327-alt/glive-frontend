@@ -28,20 +28,20 @@ import { usePaystackPayment } from "react-paystack";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
-const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const BACKEND_URL = "https://glive-backend.onrender.com";
 const PAYSTACK_PUBLIC_KEY = String(import.meta.env.VITE_PAYSTACK_PUBLIC_KEY);
 
 const streams = [
-  { id: 0, title: "NSPPD", handle: "pastorjerryeze", thumb: jerryImage },
-  { id: 1, title: "Hallelujah Challenge", handle: "NathanielBasseyMusic", thumb: hallelujahImage },
-  { id: 2, title: "Dunamis", handle: "DrPastorEnenche", thumb: dunamisImage },
-  { id: 3, title: "RCCG", handle: "RCCGWorldwide", thumb: rccgImage },
-  { id: 4, title: "Winners Chapel", handle: "LivingFaithChurchWorldwide", thumb: winnersImage }
+  { id: 0, title: "NSPPD", thumb: jerryImage },
+  { id: 1, title: "Hallelujah Challenge", thumb: hallelujahImage },
+  { id: 2, title: "Dunamis", thumb: dunamisImage },
+  { id: 3, title: "RCCG", thumb: rccgImage },
+  { id: 4, title: "Winners Chapel", thumb: winnersImage }
 ];
 
 function WatchPage() {
   const navigate = useNavigate();
+
   return (
     <div className="watch-page">
       <div className="live-grid">
@@ -58,7 +58,6 @@ function WatchPage() {
 
 function LiveViewer() {
   const navigate = useNavigate();
-  const scrollRef = useRef(null);
   const userIdRef = useRef(null);
   const giftContainerRef = useRef(null);
 
@@ -84,12 +83,11 @@ function LiveViewer() {
     if (!user) return;
 
     const ref = doc(db, "users", user.uid);
-    const unsub = onSnapshot(ref, (snap) => {
+
+    return onSnapshot(ref, (snap) => {
       if (snap.exists()) setCoins(snap.data().coins || 0);
       else setDoc(ref, { email: user.email, coins: 0 });
     });
-
-    return () => unsub();
   }, [user]);
 
   /* ================= PAYSTACK ================= */
@@ -114,25 +112,31 @@ function LiveViewer() {
           const res = await fetch(`${BACKEND_URL}/verify-payment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ reference: response.reference, userId: userIdRef.current }),
+            body: JSON.stringify({
+              reference: response.reference,
+              userId: userIdRef.current
+            }),
           });
 
           const data = await res.json();
+
           if (!res.ok) alert(`❌ Error: ${data.error}`);
           else if (data.success) alert(`✅ Wallet credited! Balance: ${data.coins}`);
           else alert("❌ Verification failed");
+
         } catch {
           alert("Server error");
         }
       },
-      onClose: () => console.log("Payment closed"),
     });
   };
 
   /* ================= COMMENTS ================= */
   useEffect(() => {
     const q = query(collection(db, "comments"), orderBy("createdAt", "asc"), limit(100));
-    return onSnapshot(q, (snap) => setComments(snap.docs.map(d => d.data())));
+    return onSnapshot(q, (snap) => {
+      setComments(snap.docs.map(d => d.data()));
+    });
   }, []);
 
   const sendMessage = async () => {
@@ -144,83 +148,95 @@ function LiveViewer() {
       username: user.email,
       createdAt: serverTimestamp()
     });
+
     setInput("");
   };
 
-  /* ================= GIFT LOGIC ================= */
+  /* ================= GIFT ================= */
   const triggerGiftAnimation = (cost) => {
     if (!giftContainerRef.current) return;
-    const giftEl = document.createElement("div");
-    giftEl.className = "gift-animation";
-    giftEl.innerText = `🎁 x${cost}`;
-    giftContainerRef.current.appendChild(giftEl);
 
-    giftEl.style.left = `${Math.random() * 80 + 10}%`;
+    const el = document.createElement("div");
+    el.className = "gift-float";
+    el.innerText = `🎁 x${cost}`;
 
-    giftEl.animate(
-      [
-        { transform: "translateY(0)", opacity: 1 },
-        { transform: "translateY(-200px)", opacity: 0 }
-      ],
-      { duration: 2000, easing: "ease-out" }
-    );
+    giftContainerRef.current.appendChild(el);
 
-    setTimeout(() => giftEl.remove(), 2000);
+    setTimeout(() => el.remove(), 1500);
   };
 
   const sendGift = async (cost) => {
     if (!user) return navigate("/login");
     if (coins < cost) return alert("Insufficient coins");
 
-    try {
-      await setDoc(doc(db, "users", user.uid), { coins: increment(-cost) }, { merge: true });
-      await addDoc(collection(db, "gifts"), {
-        userId: user.uid,
-        cost,
-        timestamp: serverTimestamp(),
-      });
-      triggerGiftAnimation(cost);
-    } catch (err) {
-      alert("Error sending gift");
-      console.error(err);
-    }
+    await setDoc(doc(db, "users", user.uid), {
+      coins: increment(-cost)
+    }, { merge: true });
+
+    await addDoc(collection(db, "gifts"), {
+      userId: user.uid,
+      cost,
+      timestamp: serverTimestamp(),
+    });
+
+    triggerGiftAnimation(cost);
+
+    // CLOSE PANEL AFTER SEND
+    setShowGiftPanel(false);
   };
 
   return (
-    <div ref={scrollRef} className="live-scroll-container">
-      <div ref={giftContainerRef} className="gift-animation-container"></div>
-      {streams.map((stream) => (
-        <div key={stream.id} className="live-stream-page">
+    <div className="live-container">
 
-          <div className="top-bar">
-            <span onClick={rechargeWallet}>🪙 {coins}</span>
+      {/* GIFT ANIMATION */}
+      <div ref={giftContainerRef} className="gift-layer"></div>
+
+      {/* TOP BAR */}
+      <div className="top-bar">
+        <span onClick={rechargeWallet}>🪙 {coins}</span>
+      </div>
+
+      {/* RIGHT SIDE */}
+      <div className="right-icons">
+        <button>❤️</button>
+        <button onClick={() => setShowGiftPanel(true)}>🎁</button>
+      </div>
+
+      {/* COMMENTS */}
+      <div className="comment-overlay">
+        {comments.map((c, i) => (
+          <div key={i} className="comment">
+            <strong>{c.username}</strong> {c.text}
           </div>
+        ))}
+      </div>
 
-          <div className="right-icons">
-            <button>❤️</button>
-            <button onClick={() => setShowGiftPanel(!showGiftPanel)}>🎁</button>
-          </div>
+      {/* INPUT (FIXED MOBILE ISSUE) */}
+      <div className="bottom-bar">
+        <input
+          placeholder="Comment..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+        />
+        <button onClick={sendMessage}>➤</button>
+      </div>
 
-          <div className="comment-overlay">
-            {comments.map((c, i) => (
-              <div key={i}><strong>{c.username}</strong> {c.text}</div>
-            ))}
-          </div>
+      {/* ================= GIFT MODAL ================= */}
+      <div className={`gift-modal ${showGiftPanel ? "active" : ""}`}>
+        <div className="gift-header">Send Gift</div>
 
-          <div className="bottom-bar">
-            <input value={input} onChange={e => setInput(e.target.value)} />
-            <button onClick={sendMessage}>Send</button>
-          </div>
-
-          {/* ================= GIFT PANEL ================= */}
-          <div className={`gift-panel ${showGiftPanel ? "slide-in" : "slide-out"}`}>
-            <button onClick={() => sendGift(5)}>5</button>
-            <button onClick={() => sendGift(20)}>20</button>
-            <button onClick={() => sendGift(50)}>50</button>
-          </div>
-
+        <div className="gift-grid">
+          <div onClick={() => sendGift(5)}>🎁 5</div>
+          <div onClick={() => sendGift(10)}>💎 10</div>
+          <div onClick={() => sendGift(20)}>🚗 20</div>
+          <div onClick={() => sendGift(50)}>🏆 50</div>
         </div>
-      ))}
+
+        <button className="close-btn" onClick={() => setShowGiftPanel(false)}>
+          Close
+        </button>
+      </div>
+
     </div>
   );
 }
