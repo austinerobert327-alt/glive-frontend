@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Routes, Route, useNavigate, useParams } from "react-router-dom";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import "./App.css";
 
 import jerryImage from "./assets/jerry.jpg";
@@ -33,7 +33,7 @@ import Register from "./pages/Register";
 const BACKEND_URL = "https://glive-backend.onrender.com";
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
 
-/* STREAM DATA */
+/* STREAMS */
 const streams = [
   { id: 0, title: "NSPPD", videoId: "5Yc9g5dGqK0", thumb: jerryImage },
   { id: 1, title: "Hallelujah", videoId: "hHW1oY26kxQ", thumb: hallelujahImage },
@@ -50,8 +50,12 @@ function WatchPage() {
     <div className="watch-page">
       <div className="live-grid">
         {streams.map(stream => (
-          <div key={stream.id} className="live-card" onClick={() => navigate(`/live/${stream.id}`)}>
-            <img src={stream.thumb} alt={stream.title} />
+          <div
+            key={stream.id}
+            className="live-card"
+            onClick={() => navigate("/live")}
+          >
+            <img src={stream.thumb} />
             <div className="live-card-title">{stream.title}</div>
           </div>
         ))}
@@ -60,12 +64,9 @@ function WatchPage() {
   );
 }
 
-/* ================= LIVE VIEW ================= */
+/* ================= LIVE VIEW (TIKTOK STYLE) ================= */
 function LiveViewer() {
-  const { id } = useParams();
   const navigate = useNavigate();
-
-  const stream = streams.find(s => s.id === Number(id));
 
   const userIdRef = useRef(null);
   const audioRef = useRef(null);
@@ -75,7 +76,6 @@ function LiveViewer() {
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState("");
   const [showGiftPanel, setShowGiftPanel] = useState(false);
-  const [muted, setMuted] = useState(true);
 
   const rechargeAmount = 1000;
 
@@ -140,7 +140,10 @@ function LiveViewer() {
         await fetch(`${BACKEND_URL}/verify-payment`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reference: response.reference, userId: userIdRef.current }),
+          body: JSON.stringify({
+            reference: response.reference,
+            userId: userIdRef.current
+          }),
         });
       }
     });
@@ -171,68 +174,76 @@ function LiveViewer() {
   };
 
   return (
-    <div className="live-container">
+    <div className="live-scroll-container">
 
       <audio ref={audioRef} src={giftSound} />
 
-      {/* VIDEO */}
-      <iframe
-        src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=${muted ? 1 : 0}`}
-        allow="autoplay"
-      />
+      {streams.map((stream) => (
+        <div key={stream.id} className="live-stream-page">
 
-      {/* TOP */}
-      <div className="top-bar">
-        <span onClick={rechargeWallet}>🪙 {coins}</span>
-      </div>
-
-      {/* RIGHT */}
-      <div className="right-icons">
-        <button onClick={() => setMuted(!muted)}>
-          {muted ? "🔇" : "🔊"}
-        </button>
-        <button onClick={() => setShowGiftPanel(true)}>🎁</button>
-      </div>
-
-      {/* COMMENTS */}
-      <div className="comment-overlay">
-        {comments.map((c, i) => (
-          <div key={i} className="comment">
-            <strong>{c.username}</strong> {c.text}
+          {/* VIDEO */}
+          <div className="video-frame">
+            <iframe
+              src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=1&playsinline=1`}
+              allow="autoplay"
+            />
           </div>
-        ))}
-      </div>
 
-      {/* INPUT */}
-      <div className="bottom-bar">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Comment..."
-        />
-        <button onClick={sendMessage}>➤</button>
-      </div>
+          {/* TOP */}
+          <div className="top-bar">
+            <span onClick={rechargeWallet}>🪙 {coins}</span>
+          </div>
 
-      {/* GIFT MODAL */}
-      <div className={`gift-modal ${showGiftPanel ? "active" : ""}`}>
-        <div className="gift-grid">
-          <div onClick={() => sendGift(5)}>🎁 5</div>
-          <div onClick={() => sendGift(20)}>💎 20</div>
-          <div onClick={() => sendGift(50)}>🏆 50</div>
+          {/* RIGHT */}
+          <div className="right-icons">
+            <button>❤️</button>
+            <button onClick={() => setShowGiftPanel(true)}>🎁</button>
+          </div>
+
+          {/* COMMENTS */}
+          <div className="comment-overlay">
+            {comments.map((c, i) => (
+              <div key={i} className="comment">
+                <strong>{c.username}</strong> {c.text}
+              </div>
+            ))}
+          </div>
+
+          {/* INPUT */}
+          <div className="bottom-bar">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Comment..."
+            />
+            <button onClick={sendMessage}>➤</button>
+          </div>
+
+          {/* GIFT MODAL */}
+          <div className={`gift-modal ${showGiftPanel ? "active" : ""}`}>
+            <div className="gift-grid">
+              <div onClick={() => sendGift(5)}>🎁 5</div>
+              <div onClick={() => sendGift(20)}>💎 20</div>
+              <div onClick={() => sendGift(50)}>🏆 50</div>
+            </div>
+            <button className="close-btn" onClick={() => setShowGiftPanel(false)}>
+              Close
+            </button>
+          </div>
+
         </div>
-        <button onClick={() => setShowGiftPanel(false)}>Close</button>
-      </div>
+      ))}
 
     </div>
   );
 }
 
-/* ================= ROUTES ================= */
+/* ROUTES */
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<WatchPage />} />
-      <Route path="/live/:id" element={<LiveViewer />} />
+      <Route path="/live" element={<LiveViewer />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
     </Routes>
