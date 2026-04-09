@@ -33,13 +33,13 @@ import Register from "./pages/Register";
 const BACKEND_URL = "https://glive-backend.onrender.com";
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
 
-/* STREAMS */
+/* 🔥 STRICT CHRISTIAN STREAMS */
 const streams = [
   { id: 0, title: "NSPPD", videoId: "5Yc9g5dGqK0", thumb: jerryImage },
-  { id: 1, title: "Hallelujah", videoId: "hHW1oY26kxQ", thumb: hallelujahImage },
+  { id: 1, title: "Hallelujah Challenge", videoId: "hHW1oY26kxQ", thumb: hallelujahImage },
   { id: 2, title: "Dunamis", videoId: "ysz5S6PUM-U", thumb: dunamisImage },
   { id: 3, title: "RCCG", videoId: "aqz-KE-bpKQ", thumb: rccgImage },
-  { id: 4, title: "Winners", videoId: "ScMzIvxBSi4", thumb: winnersImage }
+  { id: 4, title: "Winners Chapel", videoId: "ScMzIvxBSi4", thumb: winnersImage }
 ];
 
 /* ================= WATCH PAGE ================= */
@@ -64,7 +64,7 @@ function WatchPage() {
   );
 }
 
-/* ================= LIVE VIEW (TIKTOK STYLE) ================= */
+/* ================= LIVE VIEW ================= */
 function LiveViewer() {
   const navigate = useNavigate();
 
@@ -181,11 +181,11 @@ function LiveViewer() {
       {streams.map((stream) => (
         <div key={stream.id} className="live-stream-page">
 
-          {/* VIDEO */}
+          {/* VIDEO FRAME */}
           <div className="video-frame">
             <iframe
-              src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=1&playsinline=1`}
-              allow="autoplay"
+              src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=1&playsinline=1&rel=0`}
+              allow="autoplay; encrypted-media"
             />
           </div>
 
@@ -214,7 +214,7 @@ function LiveViewer() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Comment..."
+              placeholder="Type a message..."
             />
             <button onClick={sendMessage}>➤</button>
           </div>
@@ -226,7 +226,11 @@ function LiveViewer() {
               <div onClick={() => sendGift(20)}>💎 20</div>
               <div onClick={() => sendGift(50)}>🏆 50</div>
             </div>
-            <button className="close-btn" onClick={() => setShowGiftPanel(false)}>
+
+            <button
+              className="close-btn"
+              onClick={() => setShowGiftPanel(false)}
+            >
               Close
             </button>
           </div>
@@ -238,7 +242,7 @@ function LiveViewer() {
   );
 }
 
-/* ROUTES */
+/* ================= ROUTES ================= */
 export default function App() {
   return (
     <Routes>

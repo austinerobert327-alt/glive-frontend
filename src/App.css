@@ -55,8 +55,9 @@ body,
 .live-scroll-container {
   height: 100vh;
   width: 100vw;
-  overflow-y: scroll;
+  overflow-y: auto;
   scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
 }
 
 .live-stream-page {
@@ -70,15 +71,14 @@ body,
 /* ================= VIDEO FRAME ================= */
 .video-frame {
   position: absolute;
-  top: -8%;
+  top: -6%;
   left: 0;
   width: 100%;
-  height: 115%;
+  height: 110%;
   z-index: 1;
   overflow: hidden;
 }
 
-/* VIDEO */
 .video-frame iframe {
   width: 100%;
   height: 100%;
@@ -91,8 +91,8 @@ body,
   position: absolute;
   bottom: 0;
   width: 100%;
-  height: 35%;
-  background: linear-gradient(to top, black, transparent);
+  height: 40%;
+  background: linear-gradient(to top, black 20%, transparent);
   z-index: 5;
 }
 
@@ -117,7 +117,7 @@ body,
 .right-icons {
   position: absolute;
   right: 12px;
-  bottom: 150px;
+  bottom: 160px;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -144,16 +144,16 @@ body,
 /* ================= COMMENTS ================= */
 .comment-overlay {
   position: absolute;
-  bottom: 110px;
+  bottom: 120px;
   left: 12px;
   width: 70%;
-  max-height: 28%;
+  max-height: 25%;
   overflow-y: auto;
   z-index: 20;
   padding-right: 5px;
 }
 
-/* SCROLLBAR */
+/* scrollbar */
 .comment-overlay::-webkit-scrollbar {
   width: 4px;
 }
@@ -175,28 +175,31 @@ body,
 /* ================= INPUT ================= */
 .bottom-bar {
   position: absolute;
-  bottom: 10px;
+  bottom: 0;
   left: 0;
   width: 100%;
   display: flex;
   gap: 10px;
-  padding: 10px;
-  z-index: 20;
+  padding: 12px;
+  padding-bottom: 18px;
+  /* 🔥 prevents cut off */
+  z-index: 25;
+  background: linear-gradient(to top, black, transparent);
 }
 
 .bottom-bar input {
   flex: 1;
-  border-radius: 20px;
+  border-radius: 25px;
   border: none;
-  padding: 10px;
+  padding: 12px;
   background: rgba(255, 255, 255, 0.1);
   color: white;
 }
 
 .bottom-bar button {
-  width: 55px;
+  width: 60px;
   height: 45px;
-  border-radius: 20px;
+  border-radius: 25px;
   border: none;
   background: #00c853;
   color: white;
@@ -256,18 +259,17 @@ body,
   cursor: pointer;
 }
 
-/* ================= CENTER GIFT ANIMATION ================= */
+/* ================= GIFT ANIMATION ================= */
 .gift-center {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.5);
+  transform: translate(-50%, -50%) scale(0.6);
   font-size: 60px;
   z-index: 100;
   animation: popGift 1.2s ease forwards;
 }
 
-/* ANIMATION */
 @keyframes popGift {
   0% {
     transform: translate(-50%, -50%) scale(0.5);
