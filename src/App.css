@@ -103,7 +103,7 @@ body,
 /* ================= COMMENTS ================= */
 .comment-overlay {
   position: absolute;
-  bottom: 20px;
+  bottom: 10px;
   left: 10px;
   width: 75%;
   max-height: 22%;
@@ -122,7 +122,7 @@ body,
 /* ================= BOTTOM BAR ================= */
 .bottom-bar {
   position: absolute;
-  bottom: 0;
+  bottom: 10;
   width: 100%;
   display: flex;
   align-items: center;
