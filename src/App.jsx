@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import "./App.css";
 
 import jerryImage from "./assets/jerry.jpg";
+import hallelujahImage from "./assets/hallelujah.jpg";
+import dunamisImage from "./assets/dunamis.jpg";
+import rccgImage from "./assets/rccg.jpg";
+import winnersImage from "./assets/winners.jpg";
 
 import { db } from "./firebase";
 import {
@@ -14,138 +18,95 @@ import {
   limit,
   serverTimestamp,
   doc,
-  getDoc,
-  updateDoc,
   setDoc,
   increment
 } from "firebase/firestore";
 
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
-/* ENV */
-const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const PAYSTACK_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
 const BACKEND_URL = "https://glive-backend.onrender.com";
 
-const HANDLE = "pastorjerryeze";
+/* STREAMS */
+const streams = [
+  { id: 0, title: "NSPPD", videoId: "5Yc9g5dGqK0", thumb: jerryImage },
+  { id: 1, title: "Hallelujah", videoId: "hHW1oY26kxQ", thumb: hallelujahImage },
+  { id: 2, title: "Dunamis", videoId: "ysz5S6PUM-U", thumb: dunamisImage },
+  { id: 3, title: "RCCG", videoId: "aqz-KE-bpKQ", thumb: rccgImage },
+  { id: 4, title: "Winners", videoId: "ScMzIvxBSi4", thumb: winnersImage }
+];
 
-function LiveApp() {
-  const [videoId, setVideoId] = useState(null);
-  const [isLive, setIsLive] = useState(false);
-  const [comments, setComments] = useState([]);
-  const [input, setInput] = useState("");
-  const [user, setUser] = useState(null);
-  const [coins, setCoins] = useState(0);
-  const [showGiftPanel, setShowGiftPanel] = useState(false);
-  const [giftAnimation, setGiftAnimation] = useState(null);
-
-  const commentRef = useRef(null);
+/* ================= WATCH PAGE ================= */
+function WatchPage() {
   const navigate = useNavigate();
 
-  /* ================= AUTH ================= */
+  return (
+    <div className="watch-page">
+      <div className="live-grid">
+        {streams.map(stream => (
+          <div
+            key={stream.id}
+            className="live-card"
+            onClick={() => navigate("/live")}
+          >
+            <img src={stream.thumb} />
+            <div className="live-card-title">{stream.title}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ================= LIVE VIEW ================= */
+function LiveViewer() {
+  const navigate = useNavigate();
+
+  const [user, setUser] = useState(null);
+  const [coins, setCoins] = useState(0);
+  const [comments, setComments] = useState([]);
+  const [input, setInput] = useState("");
+  const [showGiftPanel, setShowGiftPanel] = useState(false);
+  const [likes, setLikes] = useState([]);
+
+  const commentRef = useRef(null);
+
+  /* AUTH */
   useEffect(() => {
     const auth = getAuth();
-    return onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
+    return onAuthStateChanged(auth, (u) => setUser(u));
   }, []);
 
-  /* ================= WALLET ================= */
+  /* WALLET */
   useEffect(() => {
     if (!user) return;
 
-    const loadWallet = async () => {
-      const ref = doc(db, "users", user.uid);
-      const snap = await getDoc(ref);
-
-      if (snap.exists()) {
-        setCoins(snap.data().coins || 0);
-      } else {
-        await setDoc(ref, {
-          email: user.email,
-          coins: 0,
-          createdAt: serverTimestamp()
-        });
-        setCoins(0);
-      }
-    };
-
-    loadWallet();
+    const ref = doc(db, "users", user.uid);
+    return onSnapshot(ref, (snap) => {
+      if (snap.exists()) setCoins(snap.data().coins || 0);
+      else setDoc(ref, { email: user.email, coins: 0 });
+    });
   }, [user]);
 
-  /* ================= FETCH YOUTUBE ================= */
+  /* COMMENTS */
   useEffect(() => {
-    const fetchVideo = async () => {
-      try {
-        const channelRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${HANDLE}&key=${API_KEY}`
-        );
-
-        const channelData = await channelRes.json();
-        const channelId = channelData.items?.[0]?.id?.channelId;
-
-        if (!channelId) return;
-
-        /* CHECK LIVE */
-        const liveRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${API_KEY}`
-        );
-
-        const liveData = await liveRes.json();
-
-        if (liveData.items?.length > 0) {
-          setVideoId(liveData.items[0].id.videoId);
-          setIsLive(true);
-        } else {
-          /* FALLBACK TO LATEST */
-          const latestRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=1&key=${API_KEY}`
-          );
-
-          const latestData = await latestRes.json();
-
-          if (latestData.items?.length > 0) {
-            setVideoId(latestData.items[0].id.videoId);
-            setIsLive(false);
-          }
-        }
-      } catch (err) {
-        console.log("YouTube error:", err);
-      }
-    };
-
-    fetchVideo();
-  }, []);
-
-  /* ================= COMMENTS ================= */
-  useEffect(() => {
-    const q = query(
-      collection(db, "comments"),
-      orderBy("createdAt", "asc"),
-      limit(100)
-    );
-
-    return onSnapshot(q, (snapshot) => {
-      setComments(snapshot.docs.map(doc => doc.data()));
+    const q = query(collection(db, "comments"), orderBy("createdAt"), limit(50));
+    return onSnapshot(q, (snap) => {
+      setComments(snap.docs.map(d => d.data()));
     });
   }, []);
 
   /* AUTO SCROLL */
   useEffect(() => {
-    const el = commentRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (commentRef.current) {
+      commentRef.current.scrollTop = commentRef.current.scrollHeight;
+    }
   }, [comments]);
 
-  /* SEND MESSAGE */
-  const sendMessage = useCallback(async () => {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
-
+  const sendMessage = async () => {
+    if (!user) return navigate("/login");
     if (!input.trim()) return;
 
     await addDoc(collection(db, "comments"), {
@@ -155,31 +116,10 @@ function LiveApp() {
     });
 
     setInput("");
-  }, [input, user]);
-
-  /* ================= GIFT ================= */
-  const triggerGiftAnimation = () => {
-    setGiftAnimation("🎁");
-    setTimeout(() => setGiftAnimation(null), 1500);
   };
 
-  const sendGift = async (cost) => {
-    if (!user) return navigate("/login");
-    if (coins < cost) return alert("Insufficient coins");
-
-    const ref = doc(db, "users", user.uid);
-
-    await updateDoc(ref, {
-      coins: increment(-cost)
-    });
-
-    setCoins(prev => prev - cost);
-    triggerGiftAnimation();
-    setShowGiftPanel(false);
-  };
-
-  /* ================= PAYSTACK ================= */
-  const rechargeCoins = () => {
+  /* PAYSTACK */
+  const recharge = () => {
     if (!user) return navigate("/login");
 
     const handler = window.PaystackPop.setup({
@@ -189,81 +129,117 @@ function LiveApp() {
       currency: "NGN",
       ref: "GLIVE_" + Date.now(),
 
-      callback: async function (response) {
+      callback: async (res) => {
         await fetch(`${BACKEND_URL}/verify-payment`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            reference: response.reference,
+            reference: res.reference,
             userId: user.uid
           })
         });
-      },
-
-      onClose: function () {
-        console.log("Payment closed");
       }
     });
 
     handler.openIframe();
   };
 
+  /* LIKE ANIMATION */
+  const sendLike = () => {
+    const id = Date.now();
+    const colors = ["#ff2d55", "#ff9500", "#00e676"];
+
+    setLikes(prev => [
+      ...prev,
+      {
+        id,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        left: Math.random() * 80
+      }
+    ]);
+
+    setTimeout(() => {
+      setLikes(prev => prev.filter(l => l.id !== id));
+    }, 2000);
+  };
+
+  /* GIFT */
+  const sendGift = async (cost) => {
+    if (!user) return navigate("/login");
+    if (coins < cost) return alert("Insufficient coins");
+
+    await setDoc(doc(db, "users", user.uid), {
+      coins: increment(-cost)
+    }, { merge: true });
+
+    setShowGiftPanel(false);
+  };
+
   return (
-    <div className="live-container">
+    <div className="live-scroll-container">
 
-      {/* VIDEO */}
-      {videoId && (
-        <iframe
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`}
-          allow="autoplay"
-        />
-      )}
+      {streams.map(stream => (
+        <div key={stream.id} className="live-stream-page">
 
-      {/* TOP */}
-      <div className="top-bar">
-        <span onClick={rechargeCoins}>🪙 {coins}</span>
-        <span>{isLive ? "🔴 LIVE" : "▶️ Replay"}</span>
-      </div>
+          {/* VIDEO */}
+          <iframe
+            src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=1&playsinline=1`}
+            allow="autoplay"
+          />
 
-      {/* RIGHT */}
-      <div className="right-icons">
-        <button onClick={() => setShowGiftPanel(true)}>🎁</button>
-      </div>
-
-      {/* COMMENTS */}
-      <div className="comment-overlay" ref={commentRef}>
-        {comments.map((c, i) => (
-          <div key={i} className="comment">
-            <strong>{c.username}</strong> {c.text}
+          {/* TOP */}
+          <div className="top-bar">
+            <span onClick={recharge}>🪙 {coins}</span>
           </div>
-        ))}
-      </div>
 
-      {/* INPUT */}
-      <div className="bottom-bar">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Comment..."
-        />
-        <button onClick={sendMessage}>➤</button>
-      </div>
+          {/* COMMENTS */}
+          <div className="comment-overlay" ref={commentRef}>
+            {comments.map((c, i) => (
+              <div key={i} className="comment">
+                <strong>{c.username}</strong> {c.text}
+              </div>
+            ))}
+          </div>
 
-      {/* GIFT PANEL */}
-      <div className={`gift-modal ${showGiftPanel ? "active" : ""}`}>
-        <div className="gift-grid">
-          <div onClick={() => sendGift(5)}>🎁 5</div>
-          <div onClick={() => sendGift(20)}>💎 20</div>
-          <div onClick={() => sendGift(50)}>🏆 50</div>
+          {/* FLOATING LIKES */}
+          <div className="like-container">
+            {likes.map(like => (
+              <span
+                key={like.id}
+                className="like"
+                style={{ left: `${like.left}%`, color: like.color }}
+              >
+                ❤️
+              </span>
+            ))}
+          </div>
+
+          {/* BOTTOM BAR */}
+          <div className="bottom-bar">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Comment..."
+            />
+
+            <button onClick={sendLike}>❤️</button>
+            <button onClick={() => setShowGiftPanel(true)}>🎁</button>
+            <button onClick={sendMessage}>➤</button>
+          </div>
+
+          {/* GIFT MODAL */}
+          <div className={`gift-modal ${showGiftPanel ? "active" : ""}`}>
+            <div className="gift-grid">
+              <div onClick={() => sendGift(5)}>🎁 5</div>
+              <div onClick={() => sendGift(20)}>💎 20</div>
+              <div onClick={() => sendGift(50)}>🏆 50</div>
+            </div>
+
+            <button onClick={() => setShowGiftPanel(false)}>Close</button>
+          </div>
+
         </div>
-
-        <button onClick={() => setShowGiftPanel(false)}>Close</button>
-      </div>
-
-      {/* GIFT ANIMATION */}
-      {giftAnimation && (
-        <div className="gift-center">{giftAnimation}</div>
-      )}
+      ))}
 
     </div>
   );
@@ -273,7 +249,8 @@ function LiveApp() {
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<LiveApp />} />
+      <Route path="/" element={<WatchPage />} />
+      <Route path="/live" element={<LiveViewer />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
     </Routes>
