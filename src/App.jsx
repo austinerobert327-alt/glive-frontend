@@ -3,10 +3,6 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import "./App.css";
 
 import jerryImage from "./assets/jerry.jpg";
-import hallelujahImage from "./assets/hallelujah.jpg";
-import dunamisImage from "./assets/dunamis.jpg";
-import rccgImage from "./assets/rccg.jpg";
-import winnersImage from "./assets/winners.jpg";
 
 import { db } from "./firebase";
 import {
@@ -19,64 +15,82 @@ import {
   serverTimestamp,
   doc,
   setDoc,
-  increment
+  updateDoc
 } from "firebase/firestore";
 
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
-const PAYSTACK_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
-const BACKEND_URL = "https://glive-backend.onrender.com";
-
-/* STREAMS */
-const streams = [
-  { id: 0, title: "NSPPD", videoId: "5Yc9g5dGqK0", thumb: jerryImage },
-  { id: 1, title: "Hallelujah", videoId: "hHW1oY26kxQ", thumb: hallelujahImage },
-  { id: 2, title: "Dunamis", videoId: "ysz5S6PUM-U", thumb: dunamisImage },
-  { id: 3, title: "RCCG", videoId: "aqz-KE-bpKQ", thumb: rccgImage },
-  { id: 4, title: "Winners", videoId: "ScMzIvxBSi4", thumb: winnersImage }
-];
+/* ENV */
+const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
+const CHANNEL_HANDLE = "pastorjerryeze";
 
 /* ================= WATCH PAGE ================= */
 function WatchPage() {
   const navigate = useNavigate();
+  const [videoId, setVideoId] = useState(null);
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    const fetchLive = async () => {
+      try {
+        const res = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${CHANNEL_HANDLE}&key=${API_KEY}`
+        );
+        const data = await res.json();
+
+        if (data.items?.length > 0) {
+          setVideoId(data.items[0].id.videoId);
+          setIsLive(true);
+        }
+      } catch (e) {
+        console.log(e);
+      }
+    };
+
+    fetchLive();
+  }, []);
 
   return (
     <div className="watch-page">
-      <div className="live-grid">
-        {streams.map(stream => (
-          <div
-            key={stream.id}
-            className="live-card"
-            onClick={() => navigate("/live")}
-          >
-            <img src={stream.thumb} />
-            <div className="live-card-title">{stream.title}</div>
-          </div>
-        ))}
+      <div className="live-card" onClick={() => navigate("/live")}>
+        <img src={jerryImage} />
+        <div className="live-card-title">
+          NSPPD {isLive && <span className="live-badge">LIVE</span>}
+        </div>
       </div>
     </div>
   );
 }
 
-/* ================= LIVE VIEW ================= */
+/* ================= LIVE ================= */
 function LiveViewer() {
   const navigate = useNavigate();
-
+  const [videoId, setVideoId] = useState(null);
   const [user, setUser] = useState(null);
   const [coins, setCoins] = useState(0);
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState("");
-  const [showGiftPanel, setShowGiftPanel] = useState(false);
-  const [likes, setLikes] = useState([]);
+  const [hearts, setHearts] = useState([]);
 
-  const commentRef = useRef(null);
+  const userRef = useRef(null);
+
+  /* PAYSTACK SCRIPT */
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://js.paystack.co/v1/inline.js";
+    document.body.appendChild(script);
+  }, []);
 
   /* AUTH */
   useEffect(() => {
     const auth = getAuth();
-    return onAuthStateChanged(auth, (u) => setUser(u));
+    return onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (u) userRef.current = u.uid;
+    });
   }, []);
 
   /* WALLET */
@@ -94,17 +108,31 @@ function LiveViewer() {
   useEffect(() => {
     const q = query(collection(db, "comments"), orderBy("createdAt"), limit(50));
     return onSnapshot(q, (snap) => {
-      setComments(snap.docs.map(d => d.data()));
+      setComments(snap.docs.map((d) => d.data()));
     });
   }, []);
 
-  /* AUTO SCROLL */
+  /* FETCH VIDEO (LIVE OR FALLBACK) */
   useEffect(() => {
-    if (commentRef.current) {
-      commentRef.current.scrollTop = commentRef.current.scrollHeight;
-    }
-  }, [comments]);
+    const fetchVideo = async () => {
+      try {
+        const res = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${CHANNEL_HANDLE}&key=${API_KEY}`
+        );
+        const data = await res.json();
 
+        if (data.items?.length > 0) {
+          setVideoId(data.items[0].id.videoId);
+        }
+      } catch (e) {
+        console.log(e);
+      }
+    };
+
+    fetchVideo();
+  }, []);
+
+  /* SEND COMMENT */
   const sendMessage = async () => {
     if (!user) return navigate("/login");
     if (!input.trim()) return;
@@ -118,134 +146,99 @@ function LiveViewer() {
     setInput("");
   };
 
-  /* PAYSTACK */
+  /* PAYSTACK POPUP */
   const recharge = () => {
     if (!user) return navigate("/login");
 
     const handler = window.PaystackPop.setup({
-      key: PAYSTACK_KEY,
+      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
       email: user.email,
       amount: 1000 * 100,
       currency: "NGN",
       ref: "GLIVE_" + Date.now(),
-
-      callback: async (res) => {
-        await fetch(`${BACKEND_URL}/verify-payment`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            reference: res.reference,
-            userId: user.uid
-          })
-        });
+      callback: async () => {
+        const refDoc = doc(db, "users", user.uid);
+        await updateDoc(refDoc, { coins: coins + 50 });
       }
     });
 
     handler.openIframe();
   };
 
-  /* LIKE ANIMATION */
-  const sendLike = () => {
-    const id = Date.now();
-    const colors = ["#ff2d55", "#ff9500", "#00e676"];
+  /* GIFT */
+  const sendGift = (cost) => {
+    if (coins < cost) return recharge();
 
-    setLikes(prev => [
-      ...prev,
-      {
-        id,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        left: Math.random() * 80
-      }
-    ]);
-
-    setTimeout(() => {
-      setLikes(prev => prev.filter(l => l.id !== id));
-    }, 2000);
+    const refDoc = doc(db, "users", user.uid);
+    updateDoc(refDoc, { coins: coins - cost });
   };
 
-  /* GIFT */
-  const sendGift = async (cost) => {
-    if (!user) return navigate("/login");
-    if (coins < cost) return alert("Insufficient coins");
+  /* HEARTS */
+  const sendHeart = () => {
+    const id = Date.now();
+    setHearts((prev) => [...prev, id]);
 
-    await setDoc(doc(db, "users", user.uid), {
-      coins: increment(-cost)
-    }, { merge: true });
-
-    setShowGiftPanel(false);
+    setTimeout(() => {
+      setHearts((prev) => prev.filter((h) => h !== id));
+    }, 2000);
   };
 
   return (
     <div className="live-scroll-container">
 
-      {streams.map(stream => (
-        <div key={stream.id} className="live-stream-page">
+      <div className="live-stream-page">
 
-          {/* VIDEO */}
-          <iframe
-            src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=1&playsinline=1`}
-            allow="autoplay"
+        {/* VIDEO */}
+        <div className="video-frame">
+          {videoId && (
+            <iframe
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`}
+              allow="autoplay"
+            />
+          )}
+        </div>
+
+        {/* COINS */}
+        <div className="top-bar">
+          <span onClick={recharge}>🪙 {coins}</span>
+        </div>
+
+        {/* COMMENTS */}
+        <div className="comment-overlay">
+          {comments.map((c, i) => (
+            <div key={i} className="comment">
+              <strong>{c.username}</strong> {c.text}
+            </div>
+          ))}
+        </div>
+
+        {/* HEARTS */}
+        {hearts.map((h) => (
+          <div key={h} className="heart">❤️</div>
+        ))}
+
+        {/* INPUT */}
+        <div className="bottom-bar">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Comment..."
           />
 
-          {/* TOP */}
-          <div className="top-bar">
-            <span onClick={recharge}>🪙 {coins}</span>
-          </div>
+          <button className="send-btn" onClick={sendMessage}>➤</button>
 
-          {/* COMMENTS */}
-          <div className="comment-overlay" ref={commentRef}>
-            {comments.map((c, i) => (
-              <div key={i} className="comment">
-                <strong>{c.username}</strong> {c.text}
-              </div>
-            ))}
-          </div>
+          <button className="icon-btn" onClick={sendHeart}>❤️</button>
 
-          {/* FLOATING LIKES */}
-          <div className="like-container">
-            {likes.map(like => (
-              <span
-                key={like.id}
-                className="like"
-                style={{ left: `${like.left}%`, color: like.color }}
-              >
-                ❤️
-              </span>
-            ))}
-          </div>
-
-          {/* BOTTOM BAR */}
-          <div className="bottom-bar">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Comment..."
-            />
-
-            <button onClick={sendLike}>❤️</button>
-            <button onClick={() => setShowGiftPanel(true)}>🎁</button>
-            <button onClick={sendMessage}>➤</button>
-          </div>
-
-          {/* GIFT MODAL */}
-          <div className={`gift-modal ${showGiftPanel ? "active" : ""}`}>
-            <div className="gift-grid">
-              <div onClick={() => sendGift(5)}>🎁 5</div>
-              <div onClick={() => sendGift(20)}>💎 20</div>
-              <div onClick={() => sendGift(50)}>🏆 50</div>
-            </div>
-
-            <button onClick={() => setShowGiftPanel(false)}>Close</button>
-          </div>
-
+          <button className="icon-btn" onClick={() => sendGift(10)}>🎁</button>
         </div>
-      ))}
+
+      </div>
 
     </div>
   );
 }
 
-/* ================= ROUTES ================= */
+/* ROUTES */
 export default function App() {
   return (
     <Routes>
