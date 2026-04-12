@@ -144,7 +144,7 @@ function LiveViewer() {
     handler.openIframe();
   };
 
-  /* LIKE ANIMATION */
+  /* LIKE */
   const sendLike = () => {
     const id = Date.now();
     const colors = ["#ff2d55", "#ff9500", "#00e676"];
@@ -166,7 +166,11 @@ function LiveViewer() {
   /* GIFT */
   const sendGift = async (cost) => {
     if (!user) return navigate("/login");
-    if (coins < cost) return alert("Insufficient coins");
+
+    if (coins < cost) {
+      recharge(); // 🔥 OPEN PAYSTACK IF EMPTY
+      return;
+    }
 
     await setDoc(doc(db, "users", user.uid), {
       coins: increment(-cost)
@@ -201,7 +205,7 @@ function LiveViewer() {
             ))}
           </div>
 
-          {/* FLOATING LIKES */}
+          {/* FLOATING HEARTS */}
           <div className="like-container">
             {likes.map(like => (
               <span
@@ -216,15 +220,20 @@ function LiveViewer() {
 
           {/* BOTTOM BAR */}
           <div className="bottom-bar">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Comment..."
-            />
 
-            <button onClick={sendLike}>❤️</button>
-            <button onClick={() => setShowGiftPanel(true)}>🎁</button>
-            <button onClick={sendMessage}>➤</button>
+            <div className="input-box">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Comment..."
+              />
+              <button className="send-btn" onClick={sendMessage}>➤</button>
+            </div>
+
+            <button className="gift-btn" onClick={() => setShowGiftPanel(true)}>🎁</button>
+
+            <button className="like-btn" onClick={sendLike}>❤️</button>
+
           </div>
 
           {/* GIFT MODAL */}
@@ -245,7 +254,7 @@ function LiveViewer() {
   );
 }
 
-/* ================= ROUTES ================= */
+/* ROUTES */
 export default function App() {
   return (
     <Routes>

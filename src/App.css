@@ -246,3 +246,63 @@ body,
     opacity: 0;
   }
 }
+
+/* FIXED BOTTOM BAR */
+.bottom-bar {
+  position: absolute;
+  bottom: 20px;
+  /* 🔥 moved up */
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  z-index: 30;
+}
+
+/* INPUT BOX */
+.input-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 25px;
+  padding: 5px 10px;
+}
+
+.input-box input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 10px;
+  outline: none;
+}
+
+/* SEND BUTTON INSIDE */
+.send-btn {
+  background: #00c853;
+  border: none;
+  color: white;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  cursor: pointer;
+}
+
+/* GIFT */
+.gift-btn {
+  font-size: 22px;
+  background: none;
+  border: none;
+  color: white;
+}
+
+/* LIKE (EXTREME RIGHT) */
+.like-btn {
+  font-size: 24px;
+  background: none;
+  border: none;
+  color: white;
+}
