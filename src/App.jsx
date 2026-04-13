@@ -74,6 +74,13 @@ function LiveViewer() {
 
   const commentRef = useRef(null);
 
+  /* LOAD PAYSTACK SCRIPT */
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://js.paystack.co/v1/inline.js";
+    document.body.appendChild(script);
+  }, []);
+
   /* AUTH */
   useEffect(() => {
     const auth = getAuth();
@@ -106,6 +113,7 @@ function LiveViewer() {
     }
   }, [comments]);
 
+  /* SEND MESSAGE */
   const sendMessage = async () => {
     if (!user) return navigate("/login");
     if (!input.trim()) return;
@@ -119,8 +127,8 @@ function LiveViewer() {
     setInput("");
   };
 
-  /* PAYSTACK */
-  const recharge = () => {
+  /* PAYSTACK FUNCTION */
+  const openPaystack = () => {
     if (!user) return navigate("/login");
 
     const handler = window.PaystackPop.setup({
@@ -168,8 +176,8 @@ function LiveViewer() {
   const sendGift = async (cost, type) => {
     if (!user) return navigate("/login");
 
-    if (coins < cost) {
-      recharge();
+    if (coins <= 0 || coins < cost) {
+      openPaystack(); // 🔥 FIXED
       return;
     }
 
@@ -195,9 +203,9 @@ function LiveViewer() {
             allow="autoplay"
           />
 
-          {/* TOP */}
+          {/* TOP WALLET */}
           <div className="top-bar">
-            <span onClick={recharge}>🪙 {coins}</span>
+            <span onClick={openPaystack}>🪙 {coins}</span>
           </div>
 
           {/* COMMENTS */}
@@ -253,7 +261,10 @@ function LiveViewer() {
               <div onClick={() => sendGift(20, "diamond")}>💎 20</div>
               <div onClick={() => sendGift(50, "trophy")}>🏆 50</div>
             </div>
-            <button onClick={() => setShowGiftPanel(false)}>Close</button>
+
+            <button className="close-btn" onClick={() => setShowGiftPanel(false)}>
+              Close
+            </button>
           </div>
 
         </div>

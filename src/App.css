@@ -105,8 +105,8 @@ iframe {
   overflow-y: auto;
   z-index: 20;
 
-  /* AUTO POSITION ABOVE INPUT */
-  bottom: calc(env(safe-area-inset-bottom) + 90px);
+  /* 🔥 FIX: push above input */
+  bottom: calc(env(safe-area-inset-bottom) + 100px);
 }
 
 .comment {
@@ -126,7 +126,7 @@ iframe {
   align-items: center;
   gap: 8px;
 
-  /* AUTO FIT (NO CUTTING) */
+  /* 🔥 FIX: NEVER CUT AGAIN */
   bottom: calc(env(safe-area-inset-bottom) + 10px);
 
   padding: 10px;
@@ -156,7 +156,7 @@ iframe {
   font-size: 14px;
 }
 
-/* ================= SEND BUTTON ================= */
+/* ================= SEND ================= */
 .send-btn {
   width: 30px;
   height: 30px;
@@ -181,7 +181,7 @@ iframe {
   cursor: pointer;
 }
 
-/* ================= HEART FLOAT ================= */
+/* ================= HEART ================= */
 .heart {
   position: absolute;
   bottom: calc(env(safe-area-inset-bottom) + 120px);
@@ -210,6 +210,10 @@ iframe {
   width: 100%;
   background: #111;
   padding: 20px;
+
+  /* 🔥 FIX: safe spacing */
+  padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+
   border-radius: 20px 20px 0 0;
   transition: 0.3s;
   z-index: 50;
@@ -231,12 +235,18 @@ iframe {
   text-align: center;
   border-radius: 10px;
   cursor: pointer;
-  transition: 0.2s;
 }
 
-.gift-grid div:hover {
-  background: #333;
-  transform: scale(1.05);
+/* ================= CLOSE BUTTON ================= */
+.close-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  background: red;
+  border: none;
+  color: white;
+  font-weight: bold;
 }
 
 /* ================= GIFT ANIMATION ================= */
@@ -250,16 +260,6 @@ iframe {
   z-index: 100;
 }
 
-/* DIFFERENT GIFT TYPES */
-.gift-center.diamond {
-  color: cyan;
-}
-
-.gift-center.trophy {
-  color: gold;
-}
-
-/* ANIMATION */
 @keyframes pop {
   0% {
     transform: translate(-50%, -50%) scale(0.5);
