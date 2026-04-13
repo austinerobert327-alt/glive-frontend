@@ -122,7 +122,7 @@ body,
 /* ================= BOTTOM BAR ================= */
 .bottom-bar {
   position: absolute;
-  bottom: 0;
+  bottom: 10;
   width: 100%;
   display: flex;
   align-items: center;
@@ -146,8 +146,8 @@ body,
 .bottom-bar .send-btn {
   background: #00c853;
   border: none;
-  padding: 10px 14px;
-  border-radius: 20px;
+  padding: 5px 7px;
+  border-radius: 10px;
   color: white;
 }
 
@@ -159,8 +159,8 @@ body,
 
 /* ICON BUTTON */
 .icon-btn {
-  width: 40px;
-  height: 40px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.6);
