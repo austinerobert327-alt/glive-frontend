@@ -70,6 +70,7 @@ function LiveViewer() {
   const [input, setInput] = useState("");
   const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [likes, setLikes] = useState([]);
+  const [giftAnim, setGiftAnim] = useState(null);
 
   const commentRef = useRef(null);
 
@@ -164,17 +165,20 @@ function LiveViewer() {
   };
 
   /* GIFT */
-  const sendGift = async (cost) => {
+  const sendGift = async (cost, type) => {
     if (!user) return navigate("/login");
 
     if (coins < cost) {
-      recharge(); // 🔥 OPEN PAYSTACK IF EMPTY
+      recharge();
       return;
     }
 
     await setDoc(doc(db, "users", user.uid), {
       coins: increment(-cost)
     }, { merge: true });
+
+    setGiftAnim(type);
+    setTimeout(() => setGiftAnim(null), 1500);
 
     setShowGiftPanel(false);
   };
@@ -205,18 +209,25 @@ function LiveViewer() {
             ))}
           </div>
 
-          {/* FLOATING HEARTS */}
+          {/* HEARTS */}
           <div className="like-container">
             {likes.map(like => (
               <span
                 key={like.id}
-                className="like"
+                className="heart"
                 style={{ left: `${like.left}%`, color: like.color }}
               >
                 ❤️
               </span>
             ))}
           </div>
+
+          {/* GIFT ANIMATION */}
+          {giftAnim && (
+            <div className={`gift-center ${giftAnim}`}>
+              {giftAnim === "diamond" ? "💎" : giftAnim === "trophy" ? "🏆" : "🎁"}
+            </div>
+          )}
 
           {/* BOTTOM BAR */}
           <div className="bottom-bar">
@@ -231,7 +242,6 @@ function LiveViewer() {
             </div>
 
             <button className="gift-btn" onClick={() => setShowGiftPanel(true)}>🎁</button>
-
             <button className="like-btn" onClick={sendLike}>❤️</button>
 
           </div>
@@ -239,11 +249,10 @@ function LiveViewer() {
           {/* GIFT MODAL */}
           <div className={`gift-modal ${showGiftPanel ? "active" : ""}`}>
             <div className="gift-grid">
-              <div onClick={() => sendGift(5)}>🎁 5</div>
-              <div onClick={() => sendGift(20)}>💎 20</div>
-              <div onClick={() => sendGift(50)}>🏆 50</div>
+              <div onClick={() => sendGift(5, "gift")}>🎁 5</div>
+              <div onClick={() => sendGift(20, "diamond")}>💎 20</div>
+              <div onClick={() => sendGift(50, "trophy")}>🏆 50</div>
             </div>
-
             <button onClick={() => setShowGiftPanel(false)}>Close</button>
           </div>
 
