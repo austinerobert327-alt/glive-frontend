@@ -28,7 +28,6 @@ body,
 }
 
 .live-card {
-  cursor: pointer;
   border-radius: 12px;
   overflow: hidden;
   background: #111;
@@ -48,7 +47,7 @@ body,
 /* ================= SCROLL ================= */
 .live-scroll-container {
   height: 100vh;
-  overflow-y: scroll;
+  overflow-y: auto;
   scroll-snap-type: y mandatory;
 }
 
@@ -63,7 +62,6 @@ body,
 .video-frame {
   position: absolute;
   top: -12%;
-  /* PUSH VIDEO UP */
   width: 100%;
   height: 120%;
   z-index: 1;
@@ -100,12 +98,69 @@ body,
   border-radius: 20px;
 }
 
-/* ================= COMMENTS ================= */
+/* ================= BOTTOM BAR (AUTO FIT) ================= */
+.bottom-bar {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  /* 🔥 AUTO FIT MAGIC */
+  bottom: calc(env(safe-area-inset-bottom) + 10px);
+
+  padding: 10px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
+
+  z-index: 30;
+  background: linear-gradient(to top, black, transparent);
+}
+
+/* INPUT */
+.bottom-bar input {
+  flex: 1;
+  padding: clamp(10px, 2.5vw, 14px);
+  border-radius: 25px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* SEND BUTTON */
+.bottom-bar .send-btn {
+  background: #00c853;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 12px;
+  color: white;
+}
+
+/* ICONS */
+.action-icons {
+  display: flex;
+  gap: 6px;
+}
+
+.icon-btn {
+  width: clamp(32px, 8vw, 40px);
+  height: clamp(32px, 8vw, 40px);
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 16px;
+}
+
+/* ================= COMMENTS (AUTO POSITION) ================= */
 .comment-overlay {
   position: absolute;
-  bottom: 0px;
   left: 10px;
   width: 75%;
+
+  /* 🔥 AUTO STACK ABOVE INPUT */
+  bottom: calc(env(safe-area-inset-bottom) + 80px);
+
   max-height: 22%;
   overflow-y: auto;
   z-index: 20;
@@ -119,60 +174,10 @@ body,
   font-size: 13px;
 }
 
-/* ================= BOTTOM BAR ================= */
-.bottom-bar {
-  position: absolute;
-  bottom: 10;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px;
-  background: linear-gradient(to top, black, transparent);
-  z-index: 30;
-}
-
-/* INPUT */
-.bottom-bar input {
-  flex: 1;
-  padding: 10px;
-  border-radius: 20px;
-  border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-/* SEND */
-.bottom-bar .send-btn {
-  background: #00c853;
-  border: none;
-  padding: 5px 7px;
-  border-radius: 10px;
-  color: white;
-}
-
-/* ICONS ROW */
-.action-icons {
-  display: flex;
-  gap: 6px;
-}
-
-/* ICON BUTTON */
-.icon-btn {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-}
-
 /* ================= HEART FLOAT ================= */
 .heart {
   position: absolute;
-  bottom: 80px;
+  bottom: calc(env(safe-area-inset-bottom) + 120px);
   left: 50%;
   font-size: 20px;
   animation: floatUp 2s linear forwards;
@@ -224,7 +229,7 @@ body,
   position: fixed;
   top: 50%;
   left: 50%;
-  font-size: 50px;
+  font-size: clamp(40px, 10vw, 60px);
   transform: translate(-50%, -50%);
   animation: pop 1.2s ease forwards;
   z-index: 100;
