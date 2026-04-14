@@ -13,8 +13,6 @@ body,
   background: black;
   color: white;
   font-family: Arial, sans-serif;
-
-  /* 🔥 IMPORTANT: allow proper mobile layout */
   overflow: hidden;
 }
 
@@ -106,8 +104,8 @@ iframe {
   overflow-y: auto;
   z-index: 20;
 
-  /* 🔥 PUSH ABOVE INPUT */
-  bottom: calc(env(safe-area-inset-bottom) + 110px);
+  /* 🔥 Adjust upward */
+  bottom: calc(env(safe-area-inset-bottom) + 120px);
 }
 
 .comment {
@@ -125,10 +123,10 @@ iframe {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 
-  /* 🔥 KEY FIX (MOVE UP + SAFE AREA) */
-  bottom: calc(env(safe-area-inset-bottom) + 20px);
+  /* 🔥 Move upward more */
+  bottom: calc(env(safe-area-inset-bottom) + 25px);
 
   padding: 10px;
   padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
@@ -137,7 +135,7 @@ iframe {
   background: linear-gradient(to top, black, transparent);
 }
 
-/* ================= INPUT ================= */
+/* ================= INPUT BOX ================= */
 .input-box {
   flex: 1;
   display: flex;
@@ -147,6 +145,7 @@ iframe {
   padding: 5px 10px;
 }
 
+/* INPUT */
 .input-box input {
   flex: 1;
   border: none;
@@ -157,15 +156,15 @@ iframe {
   font-size: 14px;
 }
 
-/* SEND BUTTON */
+/* ================= SEND BUTTON (FIXED STYLE) ================= */
 .send-btn {
-  width: 30px;
-  height: 30px;
-  font-size: 14px;
-  border-radius: 50%;
   background: #00c853;
   border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  /* square style */
   color: white;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -182,24 +181,29 @@ iframe {
   cursor: pointer;
 }
 
-/* ================= HEART ================= */
+/* ================= HEART FLOAT ================= */
 .heart {
   position: absolute;
   bottom: calc(env(safe-area-inset-bottom) + 130px);
   left: 50%;
   transform: translateX(-50%);
-  font-size: 20px;
-  animation: floatUp 2s linear forwards;
+  font-size: 22px;
+  animation: floatUp 2.5s ease forwards;
 }
 
 @keyframes floatUp {
   0% {
-    transform: translate(-50%, 0);
+    transform: translate(-50%, 0) scale(1);
     opacity: 1;
   }
 
+  50% {
+    transform: translate(-50%, -120px) scale(1.3);
+    opacity: 0.9;
+  }
+
   100% {
-    transform: translate(-50%, -200px);
+    transform: translate(-50%, -220px) scale(1);
     opacity: 0;
   }
 }
@@ -212,7 +216,8 @@ iframe {
   background: #111;
 
   padding: 20px;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 30px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
+  /* 🔥 FIX CUT */
 
   border-radius: 20px 20px 0 0;
   transition: 0.3s;
@@ -227,18 +232,24 @@ iframe {
 .gift-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 12px;
 }
 
 .gift-grid div {
   background: #222;
-  padding: 10px;
+  padding: 12px;
   text-align: center;
   border-radius: 10px;
   cursor: pointer;
+  transition: 0.2s;
 }
 
-/* CLOSE BUTTON (🔥 FIXED CUTTING) */
+.gift-grid div:hover {
+  background: #333;
+  transform: scale(1.05);
+}
+
+/* CLOSE BUTTON */
 .close-btn {
   margin-top: 15px;
   width: 100%;

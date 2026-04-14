@@ -38,7 +38,6 @@ const streams = [
   { id: 4, title: "Winners", videoId: "ScMzIvxBSi4", thumb: winnersImage }
 ];
 
-/* ================= WATCH PAGE ================= */
 function WatchPage() {
   const navigate = useNavigate();
 
@@ -46,11 +45,7 @@ function WatchPage() {
     <div className="watch-page">
       <div className="live-grid">
         {streams.map(stream => (
-          <div
-            key={stream.id}
-            className="live-card"
-            onClick={() => navigate("/live")}
-          >
+          <div key={stream.id} className="live-card" onClick={() => navigate("/live")}>
             <img src={stream.thumb} />
             <div className="live-card-title">{stream.title}</div>
           </div>
@@ -60,7 +55,6 @@ function WatchPage() {
   );
 }
 
-/* ================= LIVE VIEW ================= */
 function LiveViewer() {
   const navigate = useNavigate();
 
@@ -71,16 +65,23 @@ function LiveViewer() {
   const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [likes, setLikes] = useState([]);
 
-  const commentRef = useRef(null);
-  const paystackLoaded = useRef(false);
+  const paystackReady = useRef(false);
 
-  /* LOAD PAYSTACK */
+  /* LOAD PAYSTACK (FIXED PROPERLY) */
   useEffect(() => {
+    if (window.PaystackPop) {
+      paystackReady.current = true;
+      return;
+    }
+
     const script = document.createElement("script");
     script.src = "https://js.paystack.co/v1/inline.js";
     script.onload = () => {
-      paystackLoaded.current = true;
       console.log("✅ Paystack loaded");
+      paystackReady.current = true;
+    };
+    script.onerror = () => {
+      console.log("❌ Paystack failed to load");
     };
     document.body.appendChild(script);
   }, []);
@@ -110,19 +111,15 @@ function LiveViewer() {
     });
   }, []);
 
-  /* AUTO SCROLL */
-  useEffect(() => {
-    if (commentRef.current) {
-      commentRef.current.scrollTop = commentRef.current.scrollHeight;
-    }
-  }, [comments]);
-
-  /* PAYSTACK */
+  /* PAYSTACK FUNCTION */
   const openPaystack = () => {
     if (!user) return navigate("/login");
 
-    if (!paystackLoaded.current || !window.PaystackPop) {
-      alert("Payment still loading...");
+    console.log("🔍 Paystack ready:", paystackReady.current);
+    console.log("🔑 Key:", PAYSTACK_KEY);
+
+    if (!paystackReady.current || !window.PaystackPop) {
+      alert("Payment system still loading...");
       return;
     }
 
@@ -144,7 +141,9 @@ function LiveViewer() {
             userId: user.uid
           })
         });
-      }
+      },
+
+      onClose: () => console.log("❌ Payment closed")
     });
 
     handler.openIframe();
@@ -164,16 +163,23 @@ function LiveViewer() {
     setInput("");
   };
 
-  /* LIKE */
+  /* LIKE (FLOWING UP) */
   const sendLike = () => {
     const id = Date.now();
     const colors = ["#ff2d55", "#ff9500", "#00e676"];
 
-    setLikes(prev => [...prev, { id, color: colors[Math.floor(Math.random() * 3)], left: Math.random() * 80 }]);
+    setLikes(prev => [
+      ...prev,
+      {
+        id,
+        color: colors[Math.floor(Math.random() * 3)],
+        left: Math.random() * 80
+      }
+    ]);
 
     setTimeout(() => {
       setLikes(prev => prev.filter(l => l.id !== id));
-    }, 2000);
+    }, 2500);
   };
 
   /* GIFT */
@@ -209,7 +215,7 @@ function LiveViewer() {
           </div>
 
           {/* COMMENTS */}
-          <div className="comment-overlay" ref={commentRef}>
+          <div className="comment-overlay">
             {comments.map((c, i) => (
               <div key={i} className="comment">
                 <strong>{c.username}</strong> {c.text}
@@ -217,7 +223,7 @@ function LiveViewer() {
             ))}
           </div>
 
-          {/* LIKES */}
+          {/* FLOATING HEARTS */}
           {likes.map(like => (
             <span
               key={like.id}
@@ -237,7 +243,11 @@ function LiveViewer() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Comment..."
               />
-              <button className="send-btn" onClick={sendMessage}>➤</button>
+
+              {/* 🔥 FIXED SEND BUTTON */}
+              <button className="send-btn" onClick={sendMessage}>
+                Send
+              </button>
             </div>
 
             <button className="gift-btn" onClick={() => setShowGiftPanel(true)}>🎁</button>
@@ -265,7 +275,6 @@ function LiveViewer() {
   );
 }
 
-/* ROUTES */
 export default function App() {
   return (
     <Routes>
