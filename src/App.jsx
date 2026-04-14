@@ -38,6 +38,7 @@ const streams = [
   { id: 4, title: "Winners", videoId: "ScMzIvxBSi4", thumb: winnersImage }
 ];
 
+/* ================= WATCH PAGE ================= */
 function WatchPage() {
   const navigate = useNavigate();
 
@@ -55,6 +56,7 @@ function WatchPage() {
   );
 }
 
+/* ================= LIVE VIEW ================= */
 function LiveViewer() {
   const navigate = useNavigate();
 
@@ -65,25 +67,16 @@ function LiveViewer() {
   const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [likes, setLikes] = useState([]);
 
-  const paystackReady = useRef(false);
+  const commentRef = useRef(null);
 
-  /* LOAD PAYSTACK (FIXED PROPERLY) */
+  /* LOAD PAYSTACK SCRIPT */
   useEffect(() => {
-    if (window.PaystackPop) {
-      paystackReady.current = true;
-      return;
+    if (!window.PaystackPop) {
+      const script = document.createElement("script");
+      script.src = "https://js.paystack.co/v1/inline.js";
+      script.async = true;
+      document.body.appendChild(script);
     }
-
-    const script = document.createElement("script");
-    script.src = "https://js.paystack.co/v1/inline.js";
-    script.onload = () => {
-      console.log("✅ Paystack loaded");
-      paystackReady.current = true;
-    };
-    script.onerror = () => {
-      console.log("❌ Paystack failed to load");
-    };
-    document.body.appendChild(script);
   }, []);
 
   /* AUTH */
@@ -111,45 +104,13 @@ function LiveViewer() {
     });
   }, []);
 
-  /* PAYSTACK FUNCTION */
-  const openPaystack = () => {
-    if (!user) return navigate("/login");
-
-    console.log("🔍 Paystack ready:", paystackReady.current);
-    console.log("🔑 Key:", PAYSTACK_KEY);
-
-    if (!paystackReady.current || !window.PaystackPop) {
-      alert("Payment system still loading...");
-      return;
+  /* AUTO SCROLL */
+  useEffect(() => {
+    if (commentRef.current) {
+      commentRef.current.scrollTop = commentRef.current.scrollHeight;
     }
+  }, [comments]);
 
-    const handler = window.PaystackPop.setup({
-      key: PAYSTACK_KEY,
-      email: user.email,
-      amount: 1000 * 100,
-      currency: "NGN",
-      ref: "GLIVE_" + Date.now(),
-
-      callback: async (res) => {
-        console.log("✅ Payment success:", res.reference);
-
-        await fetch(`${BACKEND_URL}/verify-payment`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            reference: res.reference,
-            userId: user.uid
-          })
-        });
-      },
-
-      onClose: () => console.log("❌ Payment closed")
-    });
-
-    handler.openIframe();
-  };
-
-  /* SEND MESSAGE */
   const sendMessage = async () => {
     if (!user) return navigate("/login");
     if (!input.trim()) return;
@@ -163,31 +124,77 @@ function LiveViewer() {
     setInput("");
   };
 
-  /* LIKE (FLOWING UP) */
+  /* ✅ PAYSTACK FIXED */
+  const recharge = () => {
+    if (!user) return navigate("/login");
+
+    if (!window.PaystackPop) {
+      alert("Payment system loading...");
+      return;
+    }
+
+    console.log("🔍 Paystack ready:", !!window.PaystackPop);
+    console.log("🔑 Key:", PAYSTACK_KEY);
+
+    const handler = window.PaystackPop.setup({
+      key: PAYSTACK_KEY,
+      email: user.email,
+      amount: 1000 * 100,
+      currency: "NGN",
+      ref: "GLIVE_" + Date.now(),
+
+      callback: function (response) {
+        console.log("✅ Payment success:", response);
+
+        fetch(`${BACKEND_URL}/verify-payment`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            reference: response.reference,
+            userId: user.uid
+          })
+        })
+          .then(res => res.json())
+          .then(data => {
+            console.log("🔥 Backend:", data);
+            alert("Payment successful");
+          })
+          .catch(err => {
+            console.log("❌ Backend error:", err);
+          });
+      },
+
+      onClose: function () {
+        console.log("❌ Payment closed");
+      }
+    });
+
+    handler.openIframe();
+  };
+
+  /* ❤️ LIKE */
   const sendLike = () => {
     const id = Date.now();
     const colors = ["#ff2d55", "#ff9500", "#00e676"];
 
     setLikes(prev => [
       ...prev,
-      {
-        id,
-        color: colors[Math.floor(Math.random() * 3)],
-        left: Math.random() * 80
-      }
+      { id, color: colors[Math.floor(Math.random() * colors.length)], left: Math.random() * 80 }
     ]);
 
     setTimeout(() => {
       setLikes(prev => prev.filter(l => l.id !== id));
-    }, 2500);
+    }, 2000);
   };
 
-  /* GIFT */
+  /* 🎁 GIFT */
   const sendGift = async (cost) => {
     if (!user) return navigate("/login");
 
-    if (coins <= 0 || coins < cost) {
-      openPaystack(); // 🔥 FIXED
+    if (coins < cost) {
+      recharge(); // 🔥 OPEN PAYSTACK
       return;
     }
 
@@ -209,13 +216,11 @@ function LiveViewer() {
             allow="autoplay"
           />
 
-          {/* WALLET */}
           <div className="top-bar">
-            <span onClick={openPaystack}>🪙 {coins}</span>
+            <span onClick={recharge}>🪙 {coins}</span>
           </div>
 
-          {/* COMMENTS */}
-          <div className="comment-overlay">
+          <div className="comment-overlay" ref={commentRef}>
             {comments.map((c, i) => (
               <div key={i} className="comment">
                 <strong>{c.username}</strong> {c.text}
@@ -223,39 +228,21 @@ function LiveViewer() {
             ))}
           </div>
 
-          {/* FLOATING HEARTS */}
-          {likes.map(like => (
-            <span
-              key={like.id}
-              className="heart"
-              style={{ left: `${like.left}%`, color: like.color }}
-            >
-              ❤️
-            </span>
-          ))}
-
-          {/* BOTTOM BAR */}
-          <div className="bottom-bar">
-
-            <div className="input-box">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Comment..."
-              />
-
-              {/* 🔥 FIXED SEND BUTTON */}
-              <button className="send-btn" onClick={sendMessage}>
-                Send
-              </button>
-            </div>
-
-            <button className="gift-btn" onClick={() => setShowGiftPanel(true)}>🎁</button>
-            <button className="like-btn" onClick={sendLike}>❤️</button>
-
+          <div className="like-container">
+            {likes.map(like => (
+              <span key={like.id} className="heart" style={{ left: `${like.left}%`, color: like.color }}>
+                ❤️
+              </span>
+            ))}
           </div>
 
-          {/* GIFT MODAL */}
+          <div className="bottom-bar">
+            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Comment..." />
+            <button onClick={sendLike}>❤️</button>
+            <button onClick={() => (coins === 0 ? recharge() : setShowGiftPanel(true))}>🎁</button>
+            <button onClick={sendMessage}>Send</button>
+          </div>
+
           <div className={`gift-modal ${showGiftPanel ? "active" : ""}`}>
             <div className="gift-grid">
               <div onClick={() => sendGift(5)}>🎁 5</div>
@@ -263,9 +250,7 @@ function LiveViewer() {
               <div onClick={() => sendGift(50)}>🏆 50</div>
             </div>
 
-            <button className="close-btn" onClick={() => setShowGiftPanel(false)}>
-              Close
-            </button>
+            <button onClick={() => setShowGiftPanel(false)}>Close</button>
           </div>
 
         </div>
@@ -275,6 +260,7 @@ function LiveViewer() {
   );
 }
 
+/* ROUTES */
 export default function App() {
   return (
     <Routes>
