@@ -59,12 +59,14 @@ body,
   overflow: hidden;
 }
 
-/* ================= VIDEO ================= */
+/* ================= VIDEO (FIXED TO TOP) ================= */
 iframe {
   position: absolute;
-  top: -10%;
+  top: 0;
+  /* ✅ FIXED */
+  left: 0;
   width: 100%;
-  height: 120%;
+  height: 100%;
   border: none;
   z-index: 1;
 }
@@ -104,12 +106,12 @@ iframe {
   overflow-y: auto;
   z-index: 20;
 
-  /* 🔥 Adjust upward */
-  bottom: calc(env(safe-area-inset-bottom) + 120px);
+  /* 🔥 Slightly higher so it doesn't clash */
+  bottom: calc(env(safe-area-inset-bottom) + 135px);
 }
 
 .comment {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.55);
   padding: 6px 10px;
   border-radius: 10px;
   margin-bottom: 6px;
@@ -125,11 +127,11 @@ iframe {
   align-items: center;
   gap: 10px;
 
-  /* 🔥 Move upward more */
-  bottom: calc(env(safe-area-inset-bottom) + 25px);
+  /* 🔥 PERFECT ALIGNMENT */
+  bottom: calc(env(safe-area-inset-bottom) + 30px);
 
   padding: 10px;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
 
   z-index: 30;
   background: linear-gradient(to top, black, transparent);
@@ -140,9 +142,10 @@ iframe {
   flex: 1;
   display: flex;
   align-items: center;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7);
+  /* 🔥 darker */
   border-radius: 25px;
-  padding: 5px 10px;
+  padding: 6px 10px;
 }
 
 /* INPUT */
@@ -156,13 +159,12 @@ iframe {
   font-size: 14px;
 }
 
-/* ================= SEND BUTTON (FIXED STYLE) ================= */
+/* ================= SEND BUTTON ================= */
 .send-btn {
   background: #00c853;
   border: none;
   padding: 6px 12px;
   border-radius: 8px;
-  /* square style */
   color: white;
   font-size: 13px;
   cursor: pointer;
@@ -171,26 +173,27 @@ iframe {
 /* ================= ICON BUTTONS ================= */
 .gift-btn,
 .like-btn {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   border: none;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7);
   color: white;
   font-size: 18px;
   cursor: pointer;
 }
 
-/* ================= HEART FLOAT ================= */
+/* ================= HEART FLOAT (IMPROVED) ================= */
 .heart {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom) + 130px);
+  bottom: calc(env(safe-area-inset-bottom) + 140px);
   left: 50%;
-  transform: translateX(-50%);
   font-size: 22px;
+
   animation: floatUp 2.5s ease forwards;
 }
 
+/* RANDOM SIDE MOVEMENT */
 @keyframes floatUp {
   0% {
     transform: translate(-50%, 0) scale(1);
@@ -198,12 +201,12 @@ iframe {
   }
 
   50% {
-    transform: translate(-50%, -120px) scale(1.3);
+    transform: translate(-30%, -140px) scale(1.3);
     opacity: 0.9;
   }
 
   100% {
-    transform: translate(-50%, -220px) scale(1);
+    transform: translate(-70%, -260px) scale(1);
     opacity: 0;
   }
 }
@@ -217,7 +220,6 @@ iframe {
 
   padding: 20px;
   padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
-  /* 🔥 FIX CUT */
 
   border-radius: 20px 20px 0 0;
   transition: 0.3s;
@@ -259,4 +261,32 @@ iframe {
   border: none;
   color: white;
   font-weight: bold;
+}
+
+/* ================= GIFT CENTER ANIMATION ================= */
+.gift-center {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  font-size: 70px;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  animation: popGift 1.3s ease forwards;
+}
+
+@keyframes popGift {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
 }
