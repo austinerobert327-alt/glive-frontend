@@ -61,10 +61,26 @@ body,
   font-weight: bold;
 }
 
+/* ================= SCROLL ================= */
+.live-scroll-container {
+  height: 100vh;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+}
+
+.live-stream-page {
+  height: 100vh;
+  position: relative;
+  scroll-snap-align: start;
+  overflow: hidden;
+}
+
 /* ================= VIDEO ================= */
 iframe {
   position: absolute;
   top: 0;
+  /* ✅ FIXED */
   left: 0;
   width: 100%;
   height: 100%;
@@ -119,12 +135,11 @@ iframe {
   overflow-y: auto;
   z-index: 20;
 
-  /* 🔥 moved slightly up */
-  bottom: calc(env(safe-area-inset-bottom) + 150px);
+  bottom: calc(env(safe-area-inset-bottom) + 135px);
 }
 
 .comment {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.55);
   padding: 6px 10px;
   border-radius: 10px;
   margin-bottom: 6px;
@@ -140,11 +155,10 @@ iframe {
   align-items: center;
   gap: 10px;
 
-  /* 🔥 FIXED MOBILE CUTTING */
-  bottom: calc(env(safe-area-inset-bottom) + 20px);
+  bottom: calc(env(safe-area-inset-bottom) + 30px);
 
   padding: 10px;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
 
   z-index: 30;
   background: linear-gradient(to top, black, transparent);
@@ -155,10 +169,7 @@ iframe {
   flex: 1;
   display: flex;
   align-items: center;
-
-  /* 🔥 LIGHT GREY FOR VISIBILITY */
-  background: #2a2a2a;
-
+  background: rgba(0, 0, 0, 0.7);
   border-radius: 25px;
   padding: 6px 10px;
 }
@@ -171,10 +182,6 @@ iframe {
   color: white;
   padding: 10px;
   font-size: 14px;
-}
-
-.input-box input::placeholder {
-  color: #ccc;
 }
 
 /* ================= SEND BUTTON ================= */
@@ -207,6 +214,7 @@ iframe {
   bottom: calc(env(safe-area-inset-bottom) + 140px);
   left: 50%;
   font-size: 22px;
+
   animation: floatUp 2.5s ease forwards;
 }
 
@@ -235,7 +243,7 @@ iframe {
   background: #111;
 
   padding: 20px;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 60px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
 
   border-radius: 20px 20px 0 0;
   transition: 0.3s;
@@ -278,7 +286,7 @@ iframe {
   font-weight: bold;
 }
 
-/* ================= GIFT CENTER ================= */
+/* ================= GIFT CENTER ANIMATION ================= */
 .gift-center {
   position: fixed;
   top: 50%;
