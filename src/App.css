@@ -45,11 +45,28 @@ body,
   text-align: center;
 }
 
+/* ================= LIVE BADGE ================= */
+.thumb-wrapper {
+  position: relative;
+}
+
+.live-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: red;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
 /* ================= SCROLL ================= */
 .live-scroll-container {
   height: 100vh;
   overflow-y: auto;
   scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
 }
 
 .live-stream-page {
@@ -59,7 +76,7 @@ body,
   overflow: hidden;
 }
 
-/* ================= VIDEO (FIXED TO TOP) ================= */
+/* ================= VIDEO ================= */
 iframe {
   position: absolute;
   top: 0;
@@ -97,6 +114,18 @@ iframe {
   cursor: pointer;
 }
 
+/* ================= VIEWERS ================= */
+.viewer-count {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
 /* ================= COMMENTS ================= */
 .comment-overlay {
   position: absolute;
@@ -106,7 +135,6 @@ iframe {
   overflow-y: auto;
   z-index: 20;
 
-  /* 🔥 Slightly higher so it doesn't clash */
   bottom: calc(env(safe-area-inset-bottom) + 135px);
 }
 
@@ -127,7 +155,6 @@ iframe {
   align-items: center;
   gap: 10px;
 
-  /* 🔥 PERFECT ALIGNMENT */
   bottom: calc(env(safe-area-inset-bottom) + 30px);
 
   padding: 10px;
@@ -143,12 +170,10 @@ iframe {
   display: flex;
   align-items: center;
   background: rgba(0, 0, 0, 0.7);
-  /* 🔥 darker */
   border-radius: 25px;
   padding: 6px 10px;
 }
 
-/* INPUT */
 .input-box input {
   flex: 1;
   border: none;
@@ -183,7 +208,7 @@ iframe {
   cursor: pointer;
 }
 
-/* ================= HEART FLOAT (IMPROVED) ================= */
+/* ================= FLOATING HEARTS ================= */
 .heart {
   position: absolute;
   bottom: calc(env(safe-area-inset-bottom) + 140px);
@@ -193,7 +218,6 @@ iframe {
   animation: floatUp 2.5s ease forwards;
 }
 
-/* RANDOM SIDE MOVEMENT */
 @keyframes floatUp {
   0% {
     transform: translate(-50%, 0) scale(1);
@@ -230,7 +254,6 @@ iframe {
   bottom: 0;
 }
 
-/* GRID */
 .gift-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
