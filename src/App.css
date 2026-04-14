@@ -13,6 +13,8 @@ body,
   background: black;
   color: white;
   font-family: Arial, sans-serif;
+
+  /* 🔥 IMPORTANT: allow proper mobile layout */
   overflow: hidden;
 }
 
@@ -28,10 +30,10 @@ body,
 }
 
 .live-card {
-  cursor: pointer;
   border-radius: 12px;
   overflow: hidden;
   background: #111;
+  cursor: pointer;
 }
 
 .live-card img {
@@ -50,7 +52,6 @@ body,
   height: 100vh;
   overflow-y: auto;
   scroll-snap-type: y mandatory;
-  scroll-behavior: smooth;
 }
 
 .live-stream-page {
@@ -63,14 +64,14 @@ body,
 /* ================= VIDEO ================= */
 iframe {
   position: absolute;
-  top: -12%;
+  top: -10%;
   width: 100%;
   height: 120%;
   border: none;
   z-index: 1;
 }
 
-/* ================= FADE ================= */
+/* ================= DARK FADE ================= */
 .live-stream-page::after {
   content: "";
   position: absolute;
@@ -81,7 +82,7 @@ iframe {
   z-index: 5;
 }
 
-/* ================= TOP ================= */
+/* ================= TOP BAR ================= */
 .top-bar {
   position: absolute;
   top: 15px;
@@ -105,8 +106,8 @@ iframe {
   overflow-y: auto;
   z-index: 20;
 
-  /* 🔥 FIX: push above input */
-  bottom: calc(env(safe-area-inset-bottom) + 100px);
+  /* 🔥 PUSH ABOVE INPUT */
+  bottom: calc(env(safe-area-inset-bottom) + 110px);
 }
 
 .comment {
@@ -126,8 +127,8 @@ iframe {
   align-items: center;
   gap: 8px;
 
-  /* 🔥 FIX: NEVER CUT AGAIN */
-  bottom: calc(env(safe-area-inset-bottom) + 10px);
+  /* 🔥 KEY FIX (MOVE UP + SAFE AREA) */
+  bottom: calc(env(safe-area-inset-bottom) + 20px);
 
   padding: 10px;
   padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
@@ -136,7 +137,7 @@ iframe {
   background: linear-gradient(to top, black, transparent);
 }
 
-/* ================= INPUT BOX ================= */
+/* ================= INPUT ================= */
 .input-box {
   flex: 1;
   display: flex;
@@ -156,7 +157,7 @@ iframe {
   font-size: 14px;
 }
 
-/* ================= SEND ================= */
+/* SEND BUTTON */
 .send-btn {
   width: 30px;
   height: 30px;
@@ -171,8 +172,8 @@ iframe {
 /* ================= ICON BUTTONS ================= */
 .gift-btn,
 .like-btn {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.6);
@@ -184,7 +185,7 @@ iframe {
 /* ================= HEART ================= */
 .heart {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom) + 120px);
+  bottom: calc(env(safe-area-inset-bottom) + 130px);
   left: 50%;
   transform: translateX(-50%);
   font-size: 20px;
@@ -209,10 +210,9 @@ iframe {
   bottom: -100%;
   width: 100%;
   background: #111;
-  padding: 20px;
 
-  /* 🔥 FIX: safe spacing */
-  padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+  padding: 20px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 30px);
 
   border-radius: 20px 20px 0 0;
   transition: 0.3s;
@@ -223,6 +223,7 @@ iframe {
   bottom: 0;
 }
 
+/* GRID */
 .gift-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -237,42 +238,14 @@ iframe {
   cursor: pointer;
 }
 
-/* ================= CLOSE BUTTON ================= */
+/* CLOSE BUTTON (🔥 FIXED CUTTING) */
 .close-btn {
-  margin-top: 12px;
+  margin-top: 15px;
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   border-radius: 10px;
   background: red;
   border: none;
   color: white;
   font-weight: bold;
-}
-
-/* ================= GIFT ANIMATION ================= */
-.gift-center {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  font-size: 55px;
-  transform: translate(-50%, -50%);
-  animation: pop 1.2s ease forwards;
-  z-index: 100;
-}
-
-@keyframes pop {
-  0% {
-    transform: translate(-50%, -50%) scale(0.5);
-    opacity: 0;
-  }
-
-  40% {
-    transform: translate(-50%, -50%) scale(1.3);
-    opacity: 1;
-  }
-
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0;
-  }
 }

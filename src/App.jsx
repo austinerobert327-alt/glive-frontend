@@ -70,14 +70,18 @@ function LiveViewer() {
   const [input, setInput] = useState("");
   const [showGiftPanel, setShowGiftPanel] = useState(false);
   const [likes, setLikes] = useState([]);
-  const [giftAnim, setGiftAnim] = useState(null);
 
   const commentRef = useRef(null);
+  const paystackLoaded = useRef(false);
 
-  /* LOAD PAYSTACK SCRIPT */
+  /* LOAD PAYSTACK */
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://js.paystack.co/v1/inline.js";
+    script.onload = () => {
+      paystackLoaded.current = true;
+      console.log("✅ Paystack loaded");
+    };
     document.body.appendChild(script);
   }, []);
 
@@ -113,23 +117,14 @@ function LiveViewer() {
     }
   }, [comments]);
 
-  /* SEND MESSAGE */
-  const sendMessage = async () => {
-    if (!user) return navigate("/login");
-    if (!input.trim()) return;
-
-    await addDoc(collection(db, "comments"), {
-      text: input,
-      username: user.email,
-      createdAt: serverTimestamp()
-    });
-
-    setInput("");
-  };
-
-  /* PAYSTACK FUNCTION */
+  /* PAYSTACK */
   const openPaystack = () => {
     if (!user) return navigate("/login");
+
+    if (!paystackLoaded.current || !window.PaystackPop) {
+      alert("Payment still loading...");
+      return;
+    }
 
     const handler = window.PaystackPop.setup({
       key: PAYSTACK_KEY,
@@ -139,6 +134,8 @@ function LiveViewer() {
       ref: "GLIVE_" + Date.now(),
 
       callback: async (res) => {
+        console.log("✅ Payment success:", res.reference);
+
         await fetch(`${BACKEND_URL}/verify-payment`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -153,19 +150,26 @@ function LiveViewer() {
     handler.openIframe();
   };
 
+  /* SEND MESSAGE */
+  const sendMessage = async () => {
+    if (!user) return navigate("/login");
+    if (!input.trim()) return;
+
+    await addDoc(collection(db, "comments"), {
+      text: input,
+      username: user.email,
+      createdAt: serverTimestamp()
+    });
+
+    setInput("");
+  };
+
   /* LIKE */
   const sendLike = () => {
     const id = Date.now();
     const colors = ["#ff2d55", "#ff9500", "#00e676"];
 
-    setLikes(prev => [
-      ...prev,
-      {
-        id,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        left: Math.random() * 80
-      }
-    ]);
+    setLikes(prev => [...prev, { id, color: colors[Math.floor(Math.random() * 3)], left: Math.random() * 80 }]);
 
     setTimeout(() => {
       setLikes(prev => prev.filter(l => l.id !== id));
@@ -173,7 +177,7 @@ function LiveViewer() {
   };
 
   /* GIFT */
-  const sendGift = async (cost, type) => {
+  const sendGift = async (cost) => {
     if (!user) return navigate("/login");
 
     if (coins <= 0 || coins < cost) {
@@ -185,9 +189,6 @@ function LiveViewer() {
       coins: increment(-cost)
     }, { merge: true });
 
-    setGiftAnim(type);
-    setTimeout(() => setGiftAnim(null), 1500);
-
     setShowGiftPanel(false);
   };
 
@@ -197,13 +198,12 @@ function LiveViewer() {
       {streams.map(stream => (
         <div key={stream.id} className="live-stream-page">
 
-          {/* VIDEO */}
           <iframe
             src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=1&playsinline=1`}
             allow="autoplay"
           />
 
-          {/* TOP WALLET */}
+          {/* WALLET */}
           <div className="top-bar">
             <span onClick={openPaystack}>🪙 {coins}</span>
           </div>
@@ -217,25 +217,16 @@ function LiveViewer() {
             ))}
           </div>
 
-          {/* HEARTS */}
-          <div className="like-container">
-            {likes.map(like => (
-              <span
-                key={like.id}
-                className="heart"
-                style={{ left: `${like.left}%`, color: like.color }}
-              >
-                ❤️
-              </span>
-            ))}
-          </div>
-
-          {/* GIFT ANIMATION */}
-          {giftAnim && (
-            <div className={`gift-center ${giftAnim}`}>
-              {giftAnim === "diamond" ? "💎" : giftAnim === "trophy" ? "🏆" : "🎁"}
-            </div>
-          )}
+          {/* LIKES */}
+          {likes.map(like => (
+            <span
+              key={like.id}
+              className="heart"
+              style={{ left: `${like.left}%`, color: like.color }}
+            >
+              ❤️
+            </span>
+          ))}
 
           {/* BOTTOM BAR */}
           <div className="bottom-bar">
@@ -257,9 +248,9 @@ function LiveViewer() {
           {/* GIFT MODAL */}
           <div className={`gift-modal ${showGiftPanel ? "active" : ""}`}>
             <div className="gift-grid">
-              <div onClick={() => sendGift(5, "gift")}>🎁 5</div>
-              <div onClick={() => sendGift(20, "diamond")}>💎 20</div>
-              <div onClick={() => sendGift(50, "trophy")}>🏆 50</div>
+              <div onClick={() => sendGift(5)}>🎁 5</div>
+              <div onClick={() => sendGift(20)}>💎 20</div>
+              <div onClick={() => sendGift(50)}>🏆 50</div>
             </div>
 
             <button className="close-btn" onClick={() => setShowGiftPanel(false)}>
