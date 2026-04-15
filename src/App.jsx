@@ -29,7 +29,6 @@ import Register from "./pages/Register";
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const PAYSTACK_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
 
-/* STREAMS */
 const streams = [
   { id: 0, title: "NSPPD", handle: "pastorjerryeze", thumb: jerryImage },
   { id: 1, title: "Hallelujah", handle: "NathanielBasseyMusic", thumb: hallelujahImage },
@@ -38,7 +37,6 @@ const streams = [
   { id: 4, title: "Winners", handle: "LivingFaithChurchWorldwide", thumb: winnersImage }
 ];
 
-/* WATCH PAGE */
 function WatchPage() {
   const navigate = useNavigate();
 
@@ -56,7 +54,6 @@ function WatchPage() {
   );
 }
 
-/* LIVE VIEW */
 function LiveViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -71,11 +68,18 @@ function LiveViewer() {
   const [likes, setLikes] = useState([]);
   const [showGift, setShowGift] = useState(false);
   const [giftAnim, setGiftAnim] = useState(null);
+  const [viewers, setViewers] = useState(10000);
 
   const commentRef = useRef(null);
-
-  /* 🔥 SESSION START (NEW) */
   const [sessionStart] = useState(Date.now());
+
+  /* VIEWERS RANDOM */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setViewers(prev => prev + Math.floor(Math.random() * 5));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   /* FETCH VIDEO */
   useEffect(() => {
@@ -125,22 +129,18 @@ function LiveViewer() {
     });
   }, [user]);
 
-  /* 🔥 COMMENTS FILTERED */
+  /* COMMENTS */
   useEffect(() => {
     const q = query(collection(db, "comments"), orderBy("createdAt"), limit(50));
     return onSnapshot(q, (snap) => {
-      const filtered = snap.docs
-        .map(d => d.data())
-        .filter(c => {
-          if (!c.createdAt) return false;
-          return c.createdAt.toMillis() >= sessionStart;
-        });
-
+      const filtered = snap.docs.map(d => d.data()).filter(c => {
+        if (!c.createdAt) return false;
+        return c.createdAt.toMillis() >= sessionStart;
+      });
       setComments(filtered);
     });
   }, [sessionStart]);
 
-  /* AUTO SCROLL */
   useEffect(() => {
     if (commentRef.current) {
       commentRef.current.scrollTop = commentRef.current.scrollHeight;
@@ -174,7 +174,6 @@ function LiveViewer() {
     handler.openIframe();
   };
 
-  /* LIKE */
   const sendLike = () => {
     const id = Date.now();
     const colors = ["#ff2d55", "#ff9500", "#00e676"];
@@ -190,7 +189,6 @@ function LiveViewer() {
     }, 2500);
   };
 
-  /* GIFT */
   const sendGift = async (cost, emoji) => {
     if (!user) return navigate("/login");
     if (coins < cost) return recharge();
@@ -219,8 +217,14 @@ function LiveViewer() {
         )}
       </div>
 
-      <div className="top-bar">
+      {/* WALLET */}
+      <div className="top-left">
         <span onClick={recharge}>🪙 {coins}</span>
+      </div>
+
+      {/* VIEWERS */}
+      <div className="top-right">
+        👁 {viewers.toLocaleString()}
       </div>
 
       <div className="comment-overlay" ref={commentRef}>
@@ -242,7 +246,6 @@ function LiveViewer() {
       {giftAnim && <div className="gift-center">{giftAnim}</div>}
 
       <div className="bottom-bar">
-
         <div className="input-box">
           <input
             placeholder="Comment..."
@@ -254,7 +257,6 @@ function LiveViewer() {
 
         <button className="gift-btn" onClick={() => (coins === 0 ? recharge() : setShowGift(true))}>🎁</button>
         <button className="like-btn" onClick={sendLike}>❤️</button>
-
       </div>
 
       <div className={`gift-modal ${showGift ? "active" : ""}`}>
@@ -270,7 +272,6 @@ function LiveViewer() {
   );
 }
 
-/* ROUTES */
 export default function App() {
   return (
     <Routes>
