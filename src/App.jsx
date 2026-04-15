@@ -74,6 +74,9 @@ function LiveViewer() {
 
   const commentRef = useRef(null);
 
+  /* 🔥 SESSION START (NEW) */
+  const [sessionStart] = useState(Date.now());
+
   /* FETCH VIDEO */
   useEffect(() => {
     const fetchVideo = async () => {
@@ -122,14 +125,22 @@ function LiveViewer() {
     });
   }, [user]);
 
-  /* COMMENTS */
+  /* 🔥 COMMENTS FILTERED */
   useEffect(() => {
     const q = query(collection(db, "comments"), orderBy("createdAt"), limit(50));
     return onSnapshot(q, (snap) => {
-      setComments(snap.docs.map(d => d.data()));
-    });
-  }, []);
+      const filtered = snap.docs
+        .map(d => d.data())
+        .filter(c => {
+          if (!c.createdAt) return false;
+          return c.createdAt.toMillis() >= sessionStart;
+        });
 
+      setComments(filtered);
+    });
+  }, [sessionStart]);
+
+  /* AUTO SCROLL */
   useEffect(() => {
     if (commentRef.current) {
       commentRef.current.scrollTop = commentRef.current.scrollHeight;
@@ -196,7 +207,6 @@ function LiveViewer() {
   return (
     <div className="live-stream-page">
 
-      {/* VIDEO FIXED */}
       <div className="video-container">
         {videoId ? (
           <iframe
@@ -209,12 +219,10 @@ function LiveViewer() {
         )}
       </div>
 
-      {/* WALLET */}
       <div className="top-bar">
         <span onClick={recharge}>🪙 {coins}</span>
       </div>
 
-      {/* COMMENTS */}
       <div className="comment-overlay" ref={commentRef}>
         {comments.map((c, i) => (
           <div key={i} className="comment">
@@ -223,7 +231,6 @@ function LiveViewer() {
         ))}
       </div>
 
-      {/* HEARTS */}
       <div className="like-container">
         {likes.map(l => (
           <span key={l.id} className="heart" style={{ left: `${l.left}%`, color: l.color }}>
@@ -234,7 +241,6 @@ function LiveViewer() {
 
       {giftAnim && <div className="gift-center">{giftAnim}</div>}
 
-      {/* BOTTOM */}
       <div className="bottom-bar">
 
         <div className="input-box">
@@ -251,7 +257,6 @@ function LiveViewer() {
 
       </div>
 
-      {/* GIFT */}
       <div className={`gift-modal ${showGift ? "active" : ""}`}>
         <div className="gift-grid">
           <div onClick={() => sendGift(5, "🎁")}>🎁 5</div>
