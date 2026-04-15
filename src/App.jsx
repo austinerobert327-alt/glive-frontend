@@ -29,13 +29,13 @@ import Register from "./pages/Register";
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const PAYSTACK_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
 
-/* STREAMS (USING SEARCH TERM INSTEAD OF FAKE CHANNEL IDs) */
+/* STREAMS */
 const streams = [
-  { id: 0, title: "NSPPD", query: "pastor jerry eze live", thumb: jerryImage },
-  { id: 1, title: "Hallelujah", query: "hallelujah challenge live", thumb: hallelujahImage },
-  { id: 2, title: "Dunamis", query: "dunamis church live", thumb: dunamisImage },
-  { id: 3, title: "RCCG", query: "rccg live service", thumb: rccgImage },
-  { id: 4, title: "Winners", query: "winners chapel live", thumb: winnersImage }
+  { id: 0, title: "NSPPD", username: "pastorjerryeze", thumb: jerryImage },
+  { id: 1, title: "Hallelujah", username: "NathanielBasseyMusic", thumb: hallelujahImage },
+  { id: 2, title: "Dunamis", username: "DrPastorEnenche", thumb: dunamisImage },
+  { id: 3, title: "RCCG", username: "RCCGWorldwide", thumb: rccgImage },
+  { id: 4, title: "Winners", username: "LivingFaithChurchWorldwide", thumb: winnersImage }
 ];
 
 /* WATCH PAGE */
@@ -46,7 +46,11 @@ function WatchPage() {
     <div className="watch-page">
       <div className="live-grid">
         {streams.map(stream => (
-          <div key={stream.id} className="live-card" onClick={() => navigate(`/live/${stream.id}`)}>
+          <div
+            key={stream.id}
+            className="live-card"
+            onClick={() => navigate(`/live/${stream.id}`)}
+          >
             <img src={stream.thumb} />
             <div className="live-card-title">{stream.title}</div>
           </div>
@@ -84,32 +88,51 @@ function LiveViewer() {
     return () => clearInterval(interval);
   }, []);
 
-  /* 🔥 FIXED VIDEO FETCH */
+  /* 🔥 VIDEO FETCH (PROPER METHOD) */
   useEffect(() => {
     const fetchVideo = async () => {
       try {
-        // 🔴 TRY LIVE FIRST
+        // Get channel ID
+        let channelId;
+
+        const channelRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/channels?part=id&forUsername=${stream.username}&key=${API_KEY}`
+        );
+        const channelData = await channelRes.json();
+        channelId = channelData.items?.[0]?.id;
+
+        // fallback search
+        if (!channelId) {
+          const searchRes = await fetch(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${stream.username}&type=channel&key=${API_KEY}`
+          );
+          const searchData = await searchRes.json();
+          channelId = searchData.items?.[0]?.snippet?.channelId;
+        }
+
+        if (!channelId) {
+          setVideoId(null);
+          return;
+        }
+
+        // LIVE
         const liveRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${stream.query}&eventType=live&type=video&key=${API_KEY}`
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${API_KEY}`
         );
         const liveData = await liveRes.json();
 
-        if (liveData.items && liveData.items.length > 0) {
+        if (liveData.items?.length > 0) {
           setVideoId(liveData.items[0].id.videoId);
           return;
         }
 
-        // 🟡 FALLBACK TO LATEST VIDEO
+        // FALLBACK
         const latestRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${stream.query}&order=date&type=video&maxResults=1&key=${API_KEY}`
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=1&key=${API_KEY}`
         );
         const latestData = await latestRes.json();
 
-        if (latestData.items && latestData.items.length > 0) {
-          setVideoId(latestData.items[0].id.videoId);
-        } else {
-          setVideoId(null);
-        }
+        setVideoId(latestData.items?.[0]?.id?.videoId || null);
 
       } catch (err) {
         console.log(err);
@@ -187,8 +210,7 @@ function LiveViewer() {
 
     setLikes(prev => [...prev, {
       id,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      left: 80
+      color: colors[Math.floor(Math.random() * colors.length)]
     }]);
 
     setTimeout(() => {
