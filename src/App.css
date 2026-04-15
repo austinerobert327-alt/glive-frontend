@@ -53,32 +53,14 @@ body,
   overflow: hidden;
 }
 
-/* ================= LIVE BADGE ================= */
-.thumb-wrapper {
-  position: relative;
-}
-
-.live-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: red;
-  padding: 4px 8px;
-  font-size: 11px;
-  border-radius: 6px;
-  font-weight: bold;
-}
-
 /* ================= VIDEO ================= */
 iframe {
   position: absolute;
   top: 0;
-  /* 🔥 stays at top */
+  /* 🔥 video at very top */
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  /* 🔥 better fitting */
   border: none;
   z-index: 1;
 }
@@ -109,18 +91,6 @@ iframe {
   cursor: pointer;
 }
 
-/* ================= VIEWERS ================= */
-.viewer-count {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  z-index: 20;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 6px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-}
-
 /* ================= COMMENTS ================= */
 .comment-overlay {
   position: absolute;
@@ -129,7 +99,6 @@ iframe {
   max-height: 22%;
   overflow-y: auto;
   z-index: 20;
-
   bottom: calc(env(safe-area-inset-bottom) + 150px);
 }
 
@@ -149,13 +118,9 @@ iframe {
   display: flex;
   align-items: center;
   gap: 10px;
-
   bottom: calc(env(safe-area-inset-bottom) + 25px);
-  /* 🔥 FIXED */
-
   padding: 10px;
   padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
-
   z-index: 30;
   background: linear-gradient(to top, black, transparent);
 }
@@ -166,6 +131,7 @@ iframe {
   display: flex;
   align-items: center;
   background: #2a2a2a;
+  /* 🔥 light grey */
   border-radius: 25px;
   padding: 6px 10px;
 }
@@ -193,6 +159,8 @@ iframe {
   color: white;
   font-size: 13px;
   cursor: pointer;
+  margin-top: -2px;
+  /* 🔥 alignment fix */
 }
 
 /* ================= ICON BUTTONS ================= */
@@ -211,26 +179,25 @@ iframe {
 /* ================= FLOATING HEARTS ================= */
 .heart {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom) + 140px);
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom) + 120px);
+  left: 85%;
   font-size: 22px;
   animation: floatUp 2.5s ease forwards;
 }
 
 @keyframes floatUp {
   0% {
-    transform: translate(-50%, 0) scale(1);
+    transform: translate(0, 0) scale(1);
     opacity: 1;
   }
 
   50% {
-    transform: translate(-30%, -140px) scale(1.3);
+    transform: translate(-30px, -140px) scale(1.3);
     opacity: 0.9;
   }
 
   100% {
-    transform: translate(-70%, -260px) scale(1);
+    transform: translate(-60px, -260px) scale(1);
     opacity: 0;
   }
 }
@@ -241,10 +208,8 @@ iframe {
   bottom: -100%;
   width: 100%;
   background: #111;
-
   padding: 20px;
   padding-bottom: calc(env(safe-area-inset-bottom) + 60px);
-
   border-radius: 20px 20px 0 0;
   transition: 0.3s;
   z-index: 50;
@@ -286,7 +251,7 @@ iframe {
   font-weight: bold;
 }
 
-/* ================= GIFT CENTER ================= */
+/* ================= GIFT ANIMATION ================= */
 .gift-center {
   position: fixed;
   top: 50%;
