@@ -37,7 +37,7 @@ const streams = [
   { id: 4, title: "Winners", videoId: "ScMzIvxBSi4", thumb: winnersImage }
 ];
 
-/* WATCH PAGE */
+/* ================= WATCH PAGE ================= */
 function WatchPage() {
   const navigate = useNavigate();
 
@@ -45,7 +45,11 @@ function WatchPage() {
     <div className="watch-page">
       <div className="live-grid">
         {streams.map(stream => (
-          <div key={stream.id} className="live-card" onClick={() => navigate(`/live/${stream.id}`)}>
+          <div
+            key={stream.id}
+            className="live-card"
+            onClick={() => navigate(`/live/${stream.id}`)}
+          >
             <img src={stream.thumb} />
             <div className="live-card-title">{stream.title}</div>
           </div>
@@ -55,12 +59,13 @@ function WatchPage() {
   );
 }
 
-/* LIVE VIEW */
+/* ================= LIVE VIEW ================= */
 function LiveViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const stream = streams.find(s => s.id === Number(id));
+  // 🔥 SAFE FALLBACK (prevents crash)
+  const stream = streams.find(s => s.id === Number(id)) || streams[0];
 
   const [user, setUser] = useState(null);
   const [coins, setCoins] = useState(0);
@@ -96,6 +101,7 @@ function LiveViewer() {
     });
   }, []);
 
+  /* AUTO SCROLL */
   useEffect(() => {
     if (commentRef.current) {
       commentRef.current.scrollTop = commentRef.current.scrollHeight;
@@ -115,9 +121,14 @@ function LiveViewer() {
     setInput("");
   };
 
-  /* PAYSTACK */
+  /* PAYSTACK (UNCHANGED) */
   const recharge = () => {
     if (!user) return navigate("/login");
+
+    if (!window.PaystackPop) {
+      alert("Payment not ready yet");
+      return;
+    }
 
     const handler = window.PaystackPop.setup({
       key: PAYSTACK_KEY,
@@ -135,11 +146,14 @@ function LiveViewer() {
     const id = Date.now();
     const colors = ["#ff2d55", "#ff9500", "#00e676"];
 
-    setLikes(prev => [...prev, {
-      id,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      left: Math.random() * 80
-    }]);
+    setLikes(prev => [
+      ...prev,
+      {
+        id,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        left: Math.random() * 80
+      }
+    ]);
 
     setTimeout(() => {
       setLikes(prev => prev.filter(l => l.id !== id));
@@ -149,11 +163,17 @@ function LiveViewer() {
   /* GIFT */
   const sendGift = async (cost, emoji) => {
     if (!user) return navigate("/login");
-    if (coins < cost) return recharge();
 
-    await setDoc(doc(db, "users", user.uid), {
-      coins: increment(-cost)
-    }, { merge: true });
+    if (coins < cost) {
+      recharge();
+      return;
+    }
+
+    await setDoc(
+      doc(db, "users", user.uid),
+      { coins: increment(-cost) },
+      { merge: true }
+    );
 
     setGiftAnim(emoji);
     setTimeout(() => setGiftAnim(null), 1500);
@@ -163,11 +183,15 @@ function LiveViewer() {
   return (
     <div className="live-stream-page">
 
-      {/* VIDEO TOP */}
-      <iframe
-        src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=0&playsinline=1`}
-        allow="autoplay"
-      />
+      {/* VIDEO */}
+      {stream?.videoId ? (
+        <iframe
+          src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=0&playsinline=1`}
+          allow="autoplay"
+        />
+      ) : (
+        <div className="no-video">Live not available</div>
+      )}
 
       {/* WALLET */}
       <div className="top-bar">
@@ -183,10 +207,14 @@ function LiveViewer() {
         ))}
       </div>
 
-      {/* LIKES */}
+      {/* HEARTS */}
       <div className="like-container">
         {likes.map(l => (
-          <span key={l.id} className="heart" style={{ left: `${l.left}%`, color: l.color }}>
+          <span
+            key={l.id}
+            className="heart"
+            style={{ left: `${l.left}%`, color: l.color }}
+          >
             ❤️
           </span>
         ))}
@@ -204,11 +232,21 @@ function LiveViewer() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
           />
-          <button className="send-btn" onClick={sendMessage}>Send</button>
+          <button className="send-btn" onClick={sendMessage}>
+            Send
+          </button>
         </div>
 
-        <button className="gift-btn" onClick={() => (coins === 0 ? recharge() : setShowGift(true))}>🎁</button>
-        <button className="like-btn" onClick={sendLike}>❤️</button>
+        <button
+          className="gift-btn"
+          onClick={() => (coins === 0 ? recharge() : setShowGift(true))}
+        >
+          🎁
+        </button>
+
+        <button className="like-btn" onClick={sendLike}>
+          ❤️
+        </button>
 
       </div>
 
@@ -219,14 +257,17 @@ function LiveViewer() {
           <div onClick={() => sendGift(20, "💎")}>💎 20</div>
           <div onClick={() => sendGift(50, "🏆")}>🏆 50</div>
         </div>
-        <button className="close-btn" onClick={() => setShowGift(false)}>Close</button>
+
+        <button className="close-btn" onClick={() => setShowGift(false)}>
+          Close
+        </button>
       </div>
 
     </div>
   );
 }
 
-/* ROUTES */
+/* ================= ROUTES ================= */
 export default function App() {
   return (
     <Routes>
