@@ -27,7 +27,6 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 
 const PAYSTACK_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
-const BACKEND_URL = "https://glive-backend.onrender.com";
 
 /* STREAMS */
 const streams = [
@@ -38,7 +37,7 @@ const streams = [
   { id: 4, title: "Winners", videoId: "ScMzIvxBSi4", thumb: winnersImage }
 ];
 
-/* ================= WATCH PAGE ================= */
+/* WATCH PAGE */
 function WatchPage() {
   const navigate = useNavigate();
 
@@ -46,11 +45,7 @@ function WatchPage() {
     <div className="watch-page">
       <div className="live-grid">
         {streams.map(stream => (
-          <div
-            key={stream.id}
-            className="live-card"
-            onClick={() => navigate(`/live/${stream.id}`)}
-          >
+          <div key={stream.id} className="live-card" onClick={() => navigate(`/live/${stream.id}`)}>
             <img src={stream.thumb} />
             <div className="live-card-title">{stream.title}</div>
           </div>
@@ -60,18 +55,20 @@ function WatchPage() {
   );
 }
 
-/* ================= LIVE VIEW ================= */
+/* LIVE VIEW */
 function LiveViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const stream = streams.find(s => s.id === Number(id));
 
-  const [videoError, setVideoError] = useState(false);
   const [user, setUser] = useState(null);
   const [coins, setCoins] = useState(0);
   const [comments, setComments] = useState([]);
   const [input, setInput] = useState("");
+  const [likes, setLikes] = useState([]);
+  const [showGift, setShowGift] = useState(false);
+  const [giftAnim, setGiftAnim] = useState(null);
 
   const commentRef = useRef(null);
 
@@ -84,7 +81,6 @@ function LiveViewer() {
   /* WALLET */
   useEffect(() => {
     if (!user) return;
-
     const ref = doc(db, "users", user.uid);
     return onSnapshot(ref, (snap) => {
       if (snap.exists()) setCoins(snap.data().coins || 0);
@@ -134,19 +130,44 @@ function LiveViewer() {
     handler.openIframe();
   };
 
-  return (
-    <div className="live-container">
+  /* LIKE */
+  const sendLike = () => {
+    const id = Date.now();
+    const colors = ["#ff2d55", "#ff9500", "#00e676"];
 
-      {/* VIDEO */}
-      {!videoError ? (
-        <iframe
-          src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=0&playsinline=1`}
-          allow="autoplay"
-          onError={() => setVideoError(true)}
-        />
-      ) : (
-        <div className="video-error">Live not available</div>
-      )}
+    setLikes(prev => [...prev, {
+      id,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      left: Math.random() * 80
+    }]);
+
+    setTimeout(() => {
+      setLikes(prev => prev.filter(l => l.id !== id));
+    }, 2000);
+  };
+
+  /* GIFT */
+  const sendGift = async (cost, emoji) => {
+    if (!user) return navigate("/login");
+    if (coins < cost) return recharge();
+
+    await setDoc(doc(db, "users", user.uid), {
+      coins: increment(-cost)
+    }, { merge: true });
+
+    setGiftAnim(emoji);
+    setTimeout(() => setGiftAnim(null), 1500);
+    setShowGift(false);
+  };
+
+  return (
+    <div className="live-stream-page">
+
+      {/* VIDEO TOP */}
+      <iframe
+        src={`https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=0&playsinline=1`}
+        allow="autoplay"
+      />
 
       {/* WALLET */}
       <div className="top-bar">
@@ -162,16 +183,43 @@ function LiveViewer() {
         ))}
       </div>
 
-      {/* INPUT */}
+      {/* LIKES */}
+      <div className="like-container">
+        {likes.map(l => (
+          <span key={l.id} className="heart" style={{ left: `${l.left}%`, color: l.color }}>
+            ❤️
+          </span>
+        ))}
+      </div>
+
+      {/* GIFT ANIMATION */}
+      {giftAnim && <div className="gift-center">{giftAnim}</div>}
+
+      {/* BOTTOM BAR */}
       <div className="bottom-bar">
+
         <div className="input-box">
           <input
+            placeholder="Comment..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Comment..."
           />
           <button className="send-btn" onClick={sendMessage}>Send</button>
         </div>
+
+        <button className="gift-btn" onClick={() => (coins === 0 ? recharge() : setShowGift(true))}>🎁</button>
+        <button className="like-btn" onClick={sendLike}>❤️</button>
+
+      </div>
+
+      {/* GIFT MODAL */}
+      <div className={`gift-modal ${showGift ? "active" : ""}`}>
+        <div className="gift-grid">
+          <div onClick={() => sendGift(5, "🎁")}>🎁 5</div>
+          <div onClick={() => sendGift(20, "💎")}>💎 20</div>
+          <div onClick={() => sendGift(50, "🏆")}>🏆 50</div>
+        </div>
+        <button className="close-btn" onClick={() => setShowGift(false)}>Close</button>
       </div>
 
     </div>
