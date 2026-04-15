@@ -74,7 +74,7 @@ function LiveViewer() {
 
   const commentRef = useRef(null);
 
-  /* FETCH LIVE OR LAST VIDEO */
+  /* FETCH VIDEO */
   useEffect(() => {
     const fetchVideo = async () => {
       try {
@@ -196,15 +196,18 @@ function LiveViewer() {
   return (
     <div className="live-stream-page">
 
-      {/* VIDEO */}
-      {videoId ? (
-        <iframe
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0`}
-          allow="autoplay"
-        />
-      ) : (
-        <div className="no-video">Live not available</div>
-      )}
+      {/* VIDEO FIXED */}
+      <div className="video-container">
+        {videoId ? (
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&playsinline=1`}
+            allow="autoplay; fullscreen"
+            allowFullScreen
+          />
+        ) : (
+          <div className="no-video">Live not available</div>
+        )}
+      </div>
 
       {/* WALLET */}
       <div className="top-bar">
