@@ -104,8 +104,6 @@ body,
   max-height: 25%;
   overflow-y: auto;
   z-index: 20;
-
-  /* 🔥 sits above input */
   bottom: 140px;
 }
 
@@ -135,10 +133,7 @@ body,
   display: flex;
   align-items: center;
   gap: 10px;
-
-  /* 🔥 properly lifted */
   bottom: 60px;
-
   padding: 10px;
   z-index: 30;
   background: linear-gradient(to top, black, transparent);
@@ -192,11 +187,19 @@ body,
   cursor: pointer;
 }
 
+/* ================= LIKE CONTAINER ================= */
+.like-container {
+  position: absolute;
+  bottom: 120px;
+  right: 10px;
+  pointer-events: none;
+}
+
 /* ================= FLOATING HEART ================= */
 .heart {
   position: absolute;
-  bottom: 150px;
-  left: 85%;
+  bottom: 0;
+  right: 0;
   font-size: 22px;
   animation: floatUp 2.5s ease forwards;
 }
@@ -208,7 +211,7 @@ body,
   }
 
   100% {
-    transform: translate(-50px, -260px);
+    transform: translate(-40px, -260px);
     opacity: 0;
   }
 }

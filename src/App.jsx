@@ -29,14 +29,16 @@ import Register from "./pages/Register";
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const PAYSTACK_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
 
+/* STREAMS (USING SEARCH TERM INSTEAD OF FAKE CHANNEL IDs) */
 const streams = [
-  { id: 0, title: "NSPPD", handle: "pastorjerryeze", thumb: jerryImage },
-  { id: 1, title: "Hallelujah", handle: "NathanielBasseyMusic", thumb: hallelujahImage },
-  { id: 2, title: "Dunamis", handle: "DrPastorEnenche", thumb: dunamisImage },
-  { id: 3, title: "RCCG", handle: "RCCGWorldwide", thumb: rccgImage },
-  { id: 4, title: "Winners", handle: "LivingFaithChurchWorldwide", thumb: winnersImage }
+  { id: 0, title: "NSPPD", query: "pastor jerry eze live", thumb: jerryImage },
+  { id: 1, title: "Hallelujah", query: "hallelujah challenge live", thumb: hallelujahImage },
+  { id: 2, title: "Dunamis", query: "dunamis church live", thumb: dunamisImage },
+  { id: 3, title: "RCCG", query: "rccg live service", thumb: rccgImage },
+  { id: 4, title: "Winners", query: "winners chapel live", thumb: winnersImage }
 ];
 
+/* WATCH PAGE */
 function WatchPage() {
   const navigate = useNavigate();
 
@@ -54,6 +56,7 @@ function WatchPage() {
   );
 }
 
+/* LIVE VIEW */
 function LiveViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -73,39 +76,43 @@ function LiveViewer() {
   const commentRef = useRef(null);
   const [sessionStart] = useState(Date.now());
 
-  /* VIEWERS RANDOM */
+  /* VIEWERS */
   useEffect(() => {
     const interval = setInterval(() => {
-      setViewers(prev => prev + Math.floor(Math.random() * 5));
+      setViewers(v => v + Math.floor(Math.random() * 5));
     }, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  /* FETCH VIDEO */
+  /* 🔥 FIXED VIDEO FETCH */
   useEffect(() => {
     const fetchVideo = async () => {
       try {
-        const chRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${stream.handle}&type=channel&key=${API_KEY}`
-        );
-        const chData = await chRes.json();
-        const channelId = chData.items?.[0]?.id?.channelId;
-
+        // 🔴 TRY LIVE FIRST
         const liveRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${API_KEY}`
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${stream.query}&eventType=live&type=video&key=${API_KEY}`
         );
         const liveData = await liveRes.json();
 
-        if (liveData.items?.length > 0) {
+        if (liveData.items && liveData.items.length > 0) {
           setVideoId(liveData.items[0].id.videoId);
-        } else {
-          const lastRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=1&key=${API_KEY}`
-          );
-          const lastData = await lastRes.json();
-          setVideoId(lastData.items?.[0]?.id?.videoId);
+          return;
         }
-      } catch {
+
+        // 🟡 FALLBACK TO LATEST VIDEO
+        const latestRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${stream.query}&order=date&type=video&maxResults=1&key=${API_KEY}`
+        );
+        const latestData = await latestRes.json();
+
+        if (latestData.items && latestData.items.length > 0) {
+          setVideoId(latestData.items[0].id.videoId);
+        } else {
+          setVideoId(null);
+        }
+
+      } catch (err) {
+        console.log(err);
         setVideoId(null);
       }
     };
@@ -208,7 +215,7 @@ function LiveViewer() {
       <div className="video-container">
         {videoId ? (
           <iframe
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&playsinline=1`}
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0`}
             allow="autoplay; fullscreen"
             allowFullScreen
           />
@@ -217,12 +224,10 @@ function LiveViewer() {
         )}
       </div>
 
-      {/* WALLET */}
       <div className="top-left">
         <span onClick={recharge}>🪙 {coins}</span>
       </div>
 
-      {/* VIEWERS */}
       <div className="top-right">
         👁 {viewers.toLocaleString()}
       </div>
@@ -237,7 +242,7 @@ function LiveViewer() {
 
       <div className="like-container">
         {likes.map(l => (
-          <span key={l.id} className="heart" style={{ left: `${l.left}%`, color: l.color }}>
+          <span key={l.id} className="heart" style={{ color: l.color }}>
             ❤️
           </span>
         ))}
@@ -272,6 +277,7 @@ function LiveViewer() {
   );
 }
 
+/* ROUTES */
 export default function App() {
   return (
     <Routes>
