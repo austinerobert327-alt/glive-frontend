@@ -376,15 +376,23 @@ function LiveViewer() {
   /* VIDEO FETCH (UNCHANGED) */
   useEffect(() => {
     const fetchVideo = async () => {
+      setLoadingVideo(true);
+      setVideoId(null);
+
       try {
         const res = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${stream.username}&type=channel&key=${API_KEY}`
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(stream.username)}&type=channel&maxResults=1&key=${API_KEY}`
         );
         const data = await res.json();
-        const channelId = data.items?.[0]?.snippet?.channelId;
+        const channelId = data.items?.[0]?.id?.channelId;
+
+        if (!channelId) {
+          setLoadingVideo(false);
+          return;
+        }
 
         const liveRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${API_KEY}`
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&maxResults=1&key=${API_KEY}`
         );
         const liveData = await liveRes.json();
 

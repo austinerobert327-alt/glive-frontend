@@ -153,8 +153,8 @@ body,
   display: flex;
   align-items: center;
   gap: 10px;
-  bottom: 60px;
-  padding: 10px;
+  bottom: 48px;
+  padding: 10px 12px;
   z-index: 30;
   background: linear-gradient(to top, black, transparent);
 }
@@ -164,9 +164,10 @@ body,
   flex: 1;
   display: flex;
   align-items: center;
+  min-height: 42px;
   background: #2a2a2a;
   border-radius: 25px;
-  padding: 6px 10px;
+  padding: 4px 8px 4px 12px;
 }
 
 .input-box input {
@@ -175,8 +176,9 @@ body,
   outline: none;
   background: transparent;
   color: white;
-  padding: 10px;
+  padding: 0 10px 0 0;
   font-size: 14px;
+  line-height: 1;
 }
 
 .input-box input::placeholder {
@@ -186,7 +188,8 @@ body,
 .send-btn {
   background: #00c853;
   border: none;
-  padding: 6px 12px;
+  height: 34px;
+  padding: 0 14px;
   border-radius: 8px;
   color: white;
   font-size: 13px;
