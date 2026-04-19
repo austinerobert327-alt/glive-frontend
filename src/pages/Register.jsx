@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  updateProfile
+} from "firebase/auth";
 import { useNavigate, Link } from "react-router-dom";
 import { db } from "../firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -9,14 +13,17 @@ function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const navigate = useNavigate();
   const auth = getAuth();
 
   const handleRegister = async () => {
 
+    setErrorMsg("");
+
     if (!username || !email || !password) {
-      alert("Please fill all fields");
+      setErrorMsg("Please fill all fields");
       return;
     }
 
@@ -30,7 +37,6 @@ function Register() {
       });
 
       /* CREATE WALLET */
-
       await setDoc(doc(db, "users", user.uid), {
         username: username,
         email: user.email,
@@ -42,7 +48,15 @@ function Register() {
 
     } catch (err) {
 
-      alert(err.message);
+      if (err.code === "auth/email-already-in-use") {
+        setErrorMsg("Email already in use");
+      } else if (err.code === "auth/invalid-email") {
+        setErrorMsg("Invalid email");
+      } else if (err.code === "auth/weak-password") {
+        setErrorMsg("Password should be at least 6 characters");
+      } else {
+        setErrorMsg("Registration failed. Try again");
+      }
 
     }
 
@@ -70,6 +84,13 @@ function Register() {
       }}>
 
         <h2 style={{ textAlign: "center", color: "white" }}>Create Account</h2>
+
+        {/* 🔴 ERROR MESSAGE */}
+        {errorMsg && (
+          <p style={{ color: "red", fontSize: "13px", textAlign: "center" }}>
+            {errorMsg}
+          </p>
+        )}
 
         <input
           value={username}
@@ -123,7 +144,7 @@ function Register() {
             cursor: "pointer"
           }}
         >
-          Register
+          Continue
         </button>
 
         <p style={{ textAlign: "center", fontSize: "13px", color: "white" }}>

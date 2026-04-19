@@ -1,29 +1,97 @@
 import { useState } from "react";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import {
+    getAuth,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    GoogleAuthProvider,
+    signInWithPopup
+} from "firebase/auth";
 import { useNavigate, Link } from "react-router-dom";
+import { db } from "../firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 function Login() {
 
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
-    const navigate = useNavigate()
-    const auth = getAuth()
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [errorMsg, setErrorMsg] = useState("");
 
+    const navigate = useNavigate();
+    const auth = getAuth();
+
+    /* 🔥 EMAIL LOGIN (SMART: login OR register) */
     const handleLogin = async () => {
+
+        setErrorMsg("");
 
         try {
 
-            await signInWithEmailAndPassword(auth, email, password)
+            // try login
+            const res = await signInWithEmailAndPassword(auth, email, password);
 
-            navigate("/")
+            await ensureUserWallet(res.user);
+
+            navigate("/");
 
         } catch (err) {
 
-            alert(err.message)
+            // if user not found → create account automatically
+            if (err.code === "auth/user-not-found") {
+
+                try {
+                    const res = await createUserWithEmailAndPassword(auth, email, password);
+
+                    await ensureUserWallet(res.user);
+
+                    navigate("/");
+
+                } catch (e) {
+                    setErrorMsg("Login failed. Check your details");
+                }
+
+            } else if (err.code === "auth/wrong-password") {
+                setErrorMsg("Incorrect password");
+            } else if (err.code === "auth/invalid-email") {
+                setErrorMsg("Invalid email");
+            } else {
+                setErrorMsg("Login failed. Try again");
+            }
 
         }
 
-    }
+    };
+
+    /* 🔥 GOOGLE LOGIN */
+    const handleGoogleLogin = async () => {
+
+        setErrorMsg("");
+
+        try {
+
+            const provider = new GoogleAuthProvider();
+
+            const result = await signInWithPopup(auth, provider);
+
+            await ensureUserWallet(result.user);
+
+            navigate("/");
+
+        } catch (err) {
+            console.log(err);
+            setErrorMsg("Google login failed");
+        }
+
+    };
+
+    /* 🔥 ENSURE WALLET EXISTS */
+    const ensureUserWallet = async (user) => {
+        const ref = doc(db, "users", user.uid);
+
+        await setDoc(ref, {
+            email: user.email,
+            coins: 0
+        }, { merge: true });
+    };
 
     return (
 
@@ -47,6 +115,13 @@ function Login() {
             }}>
 
                 <h2 style={{ textAlign: "center" }}>Login</h2>
+
+                {/* 🔴 ERROR MESSAGE */}
+                {errorMsg && (
+                    <p style={{ color: "red", fontSize: "13px", textAlign: "center" }}>
+                        {errorMsg}
+                    </p>
+                )}
 
                 <input
                     placeholder="Email"
@@ -84,7 +159,22 @@ function Login() {
                         fontWeight: "bold"
                     }}
                 >
-                    Login
+                    Continue with Email
+                </button>
+
+                {/* 🔥 GOOGLE BUTTON */}
+                <button
+                    onClick={handleGoogleLogin}
+                    style={{
+                        padding: "12px",
+                        borderRadius: "8px",
+                        border: "none",
+                        background: "#fff",
+                        color: "#000",
+                        fontWeight: "bold"
+                    }}
+                >
+                    Continue with Google
                 </button>
 
                 <p style={{ textAlign: "center", fontSize: "13px" }}>
@@ -99,4 +189,4 @@ function Login() {
 
 }
 
-export default Login
+export default Login;
