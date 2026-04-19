@@ -19,8 +19,7 @@ import {
   serverTimestamp,
   doc,
   setDoc,
-  increment,
-  runTransaction
+  increment
 } from "firebase/firestore";
 
 import {
@@ -36,6 +35,79 @@ import Register from "./pages/Register";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const PAYSTACK_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
+const PAYSTACK_SCRIPT_SRC = "https://js.paystack.co/v1/inline.js";
+
+function loadPaystackScript() {
+  if (window.PaystackPop) {
+    return Promise.resolve(window.PaystackPop);
+  }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback) => {
+      if (settled) return;
+      settled = true;
+      callback();
+    };
+
+    const existingScript = document.querySelector(`script[src="${PAYSTACK_SCRIPT_SRC}"]`);
+
+    const handleLoad = () => {
+      if (window.PaystackPop) {
+        finish(() => resolve(window.PaystackPop));
+      } else {
+        finish(() => reject(new Error("Paystack script loaded but PaystackPop is unavailable.")));
+      }
+    };
+
+    const handleError = () => {
+      finish(() => reject(new Error("Unable to load Paystack script.")));
+    };
+
+    if (existingScript) {
+      existingScript.addEventListener("load", handleLoad, { once: true });
+      existingScript.addEventListener("error", handleError, { once: true });
+
+      window.setTimeout(() => {
+        if (window.PaystackPop) {
+          finish(() => resolve(window.PaystackPop));
+        }
+      }, 300);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = PAYSTACK_SCRIPT_SRC;
+    script.async = true;
+    script.onload = handleLoad;
+    script.onerror = handleError;
+    document.body.appendChild(script);
+  });
+}
+
+async function verifyPaymentOnBackend(reference, userId) {
+  const response = await fetch(`${BACKEND_URL}/verify-payment`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ reference, userId })
+  });
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.error?.message || data?.error || "Payment verification failed.");
+  }
+
+  return data;
+}
 
 /* STREAMS */
 const streams = [
@@ -174,58 +246,47 @@ function LiveViewer() {
   const recharge = () => {
     requireLogin(async () => {
       if (isRecharging) return;
-      if (!window.PaystackPop) {
-        alert("Payment service is not available right now.");
-        return;
-      }
 
       const rechargeAmount = 1000;
       const txRef = "GLIVE_" + Date.now();
 
       setIsRecharging(true);
 
-      const handler = window.PaystackPop.setup({
-        key: PAYSTACK_KEY,
-        email: user.email,
-        amount: rechargeAmount * 100,
-        ref: txRef,
-        callback: async function (response) {
-          try {
-            const paymentRef = response?.reference || txRef;
-            const userRef = doc(db, "users", user.uid);
-            const paymentRefDoc = doc(db, "payments", paymentRef);
+      try {
+        const PaystackPop = await loadPaystackScript();
 
-            await runTransaction(db, async (transaction) => {
-              const paymentSnap = await transaction.get(paymentRefDoc);
-
-              if (paymentSnap.exists()) return;
-
-              transaction.set(paymentRefDoc, {
-                uid: user.uid,
-                email: user.email,
-                amount: rechargeAmount,
-                reference: paymentRef,
-                createdAt: serverTimestamp()
-              });
-
-              transaction.set(userRef, {
-                email: user.email,
-                coins: increment(rechargeAmount)
-              }, { merge: true });
-            });
-          } catch (error) {
-            console.error("Recharge credit failed:", error);
-            alert("Payment was received, but wallet update failed. Please contact support with your payment reference.");
-          } finally {
+        const handler = PaystackPop.setup({
+          key: PAYSTACK_KEY,
+          email: user.email,
+          amount: rechargeAmount * 100,
+          ref: txRef,
+          currency: "NGN",
+          metadata: {
+            userId: user.uid,
+            email: user.email
+          },
+          callback: async function (response) {
+            try {
+              const paymentRef = response?.reference || txRef;
+              await verifyPaymentOnBackend(paymentRef, user.uid);
+            } catch (error) {
+              console.error("Recharge verification failed:", error);
+              alert(`Payment was completed, but wallet verification failed. Reference: ${response?.reference || txRef}`);
+            } finally {
+              setIsRecharging(false);
+            }
+          },
+          onClose: function () {
             setIsRecharging(false);
           }
-        },
-        onClose: function () {
-          setIsRecharging(false);
-        }
-      });
+        });
 
-      handler.openIframe();
+        handler.openIframe();
+      } catch (error) {
+        console.error("Unable to launch Paystack:", error);
+        alert("Payment service is not available right now.");
+        setIsRecharging(false);
+      }
     });
   };
 
@@ -380,7 +441,9 @@ function LiveViewer() {
       </div>
 
       <div className="top-left">
-        <span onClick={recharge}>🪙 {coins}</span>
+        <button className="wallet-btn" type="button" onClick={recharge} disabled={isRecharging}>
+          🪙 {isRecharging ? "Loading..." : coins}
+        </button>
       </div>
 
       <div className="top-right">
