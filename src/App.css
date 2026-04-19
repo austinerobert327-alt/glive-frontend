@@ -164,10 +164,10 @@ body,
   flex: 1;
   display: flex;
   align-items: center;
-  min-height: 42px;
-  background: #2a2a2a;
+  height: 34px;
+  background: #1f1f1f;
   border-radius: 25px;
-  padding: 4px 8px 4px 12px;
+  padding: 0 8px 0 12px;
 }
 
 .input-box input {

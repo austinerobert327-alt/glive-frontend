@@ -141,6 +141,12 @@ async function processRechargeVerification(reference, userId, fallbackRef, setIs
   }
 }
 
+async function fetchYouTubeSearch(url) {
+  const response = await fetch(url);
+  const data = await response.json();
+  return data.items || [];
+}
+
 /* STREAMS */
 const streams = [
   { id: 0, title: "NSPPD", username: "pastorjerryeze", thumb: jerryImage },
@@ -380,32 +386,41 @@ function LiveViewer() {
       setVideoId(null);
 
       try {
-        const res = await fetch(
+        const channelItems = await fetchYouTubeSearch(
           `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(stream.username)}&type=channel&maxResults=1&key=${API_KEY}`
         );
-        const data = await res.json();
-        const channelId = data.items?.[0]?.id?.channelId;
+        const channelId = channelItems[0]?.id?.channelId;
 
         if (!channelId) {
           setLoadingVideo(false);
           return;
         }
 
-        const liveRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&maxResults=1&key=${API_KEY}`
+        const liveItems = await fetchYouTubeSearch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&videoEmbeddable=true&videoSyndicated=true&maxResults=1&key=${API_KEY}`
         );
-        const liveData = await liveRes.json();
 
-        if (liveData.items?.length > 0) {
-          setVideoId(liveData.items[0].id.videoId);
-        } else {
-          const latestRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=1&key=${API_KEY}`
-          );
-          const latestData = await latestRes.json();
-          setVideoId(latestData.items?.[0]?.id?.videoId || null);
+        if (liveItems.length > 0) {
+          setVideoId(liveItems[0].id.videoId);
+          setLoadingVideo(false);
+          return;
         }
 
+        const completedLiveItems = await fetchYouTubeSearch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=completed&type=video&order=date&videoEmbeddable=true&videoSyndicated=true&maxResults=1&key=${API_KEY}`
+        );
+
+        if (completedLiveItems.length > 0) {
+          setVideoId(completedLiveItems[0].id.videoId);
+          setLoadingVideo(false);
+          return;
+        }
+
+        const latestVideoItems = await fetchYouTubeSearch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&videoEmbeddable=true&videoSyndicated=true&maxResults=1&key=${API_KEY}`
+        );
+
+        setVideoId(latestVideoItems[0]?.id?.videoId || null);
         setLoadingVideo(false);
       } catch {
         setVideoId(null);
