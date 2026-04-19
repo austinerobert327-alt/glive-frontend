@@ -147,13 +147,25 @@ async function fetchYouTubeSearch(url) {
   return data.items || [];
 }
 
+function getUploadsPlaylistId(channelId) {
+  return channelId?.startsWith("UC") ? `UU${channelId.slice(2)}` : null;
+}
+
+function getLiveEmbedUrl(channelId) {
+  return `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&mute=1&playsinline=1`;
+}
+
+function getPlaylistEmbedUrl(playlistId) {
+  return `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&mute=1&playsinline=1`;
+}
+
 /* STREAMS */
 const streams = [
-  { id: 0, title: "NSPPD", username: "pastorjerryeze", thumb: jerryImage },
-  { id: 1, title: "Hallelujah", username: "NathanielBasseyMusic", thumb: hallelujahImage },
-  { id: 2, title: "Dunamis", username: "DrPastorEnenche", thumb: dunamisImage },
-  { id: 3, title: "RCCG", username: "RCCGWorldwide", thumb: rccgImage },
-  { id: 4, title: "Winners", username: "LivingFaithChurchWorldwide", thumb: winnersImage }
+  { id: 0, title: "NSPPD", username: "pastorjerryeze", channelId: "UCLg4NCAJxhIvD4IRV__LOFg", thumb: jerryImage },
+  { id: 1, title: "Hallelujah", username: "NathanielBasseyMain", channelId: "UCRe2Ir9wtPk_YQjElam7n2w", thumb: hallelujahImage },
+  { id: 2, title: "Dunamis", username: "DunamisTV", channelId: "UC0pFEFO86OwhVUcqAQ4ICjQ", thumb: dunamisImage },
+  { id: 3, title: "RCCG", username: "RCCGContinentalTV", channelId: "UCJdR5HjXZ6IKrWuUC3JCOkQ", thumb: rccgImage },
+  { id: 4, title: "Winners", username: "LivingFaithChurchWorldwide", channelId: "UCyUKtrMdDilf74SPkCCKKtw", thumb: winnersImage }
 ];
 
 /* WATCH PAGE */
@@ -208,6 +220,7 @@ function LiveViewer() {
   const stream = streams.find(s => s.id === Number(id)) || streams[0];
 
   const [videoId, setVideoId] = useState(null);
+  const [videoSrc, setVideoSrc] = useState(null);
   const [loadingVideo, setLoadingVideo] = useState(true);
 
   const [user, setUser] = useState(null);
@@ -384,24 +397,31 @@ function LiveViewer() {
     const fetchVideo = async () => {
       setLoadingVideo(true);
       setVideoId(null);
+      setVideoSrc(null);
+
+      const channelId = stream.channelId;
+      const uploadsPlaylistId = getUploadsPlaylistId(channelId);
+
+      if (!channelId) {
+        setLoadingVideo(false);
+        return;
+      }
+
+      if (!API_KEY) {
+        setVideoSrc(uploadsPlaylistId ? getPlaylistEmbedUrl(uploadsPlaylistId) : getLiveEmbedUrl(channelId));
+        setLoadingVideo(false);
+        return;
+      }
 
       try {
-        const channelItems = await fetchYouTubeSearch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(stream.username)}&type=channel&maxResults=1&key=${API_KEY}`
-        );
-        const channelId = channelItems[0]?.id?.channelId;
-
-        if (!channelId) {
-          setLoadingVideo(false);
-          return;
-        }
-
         const liveItems = await fetchYouTubeSearch(
           `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&videoEmbeddable=true&videoSyndicated=true&maxResults=1&key=${API_KEY}`
         );
 
         if (liveItems.length > 0) {
-          setVideoId(liveItems[0].id.videoId);
+          const nextVideoId = liveItems[0].id.videoId;
+          setVideoId(nextVideoId);
+          setVideoSrc(`https://www.youtube.com/embed/${nextVideoId}?autoplay=1&mute=1&playsinline=1`);
           setLoadingVideo(false);
           return;
         }
@@ -411,7 +431,9 @@ function LiveViewer() {
         );
 
         if (completedLiveItems.length > 0) {
-          setVideoId(completedLiveItems[0].id.videoId);
+          const nextVideoId = completedLiveItems[0].id.videoId;
+          setVideoId(nextVideoId);
+          setVideoSrc(`https://www.youtube.com/embed/${nextVideoId}?autoplay=1&mute=1&playsinline=1`);
           setLoadingVideo(false);
           return;
         }
@@ -420,10 +442,19 @@ function LiveViewer() {
           `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&videoEmbeddable=true&videoSyndicated=true&maxResults=1&key=${API_KEY}`
         );
 
-        setVideoId(latestVideoItems[0]?.id?.videoId || null);
+        const nextVideoId = latestVideoItems[0]?.id?.videoId || null;
+        setVideoId(nextVideoId);
+        setVideoSrc(
+          nextVideoId
+            ? `https://www.youtube.com/embed/${nextVideoId}?autoplay=1&mute=1&playsinline=1`
+            : uploadsPlaylistId
+              ? getPlaylistEmbedUrl(uploadsPlaylistId)
+              : getLiveEmbedUrl(channelId)
+        );
         setLoadingVideo(false);
       } catch {
         setVideoId(null);
+        setVideoSrc(uploadsPlaylistId ? getPlaylistEmbedUrl(uploadsPlaylistId) : getLiveEmbedUrl(channelId));
         setLoadingVideo(false);
       }
     };
@@ -483,9 +514,9 @@ function LiveViewer() {
       <div className="video-container">
         {loadingVideo ? (
           <div className="no-video">Loading...</div>
-        ) : videoId ? (
+        ) : videoSrc ? (
           <iframe
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`}
+            src={videoSrc}
             allow="autoplay; fullscreen"
             allowFullScreen
           />
