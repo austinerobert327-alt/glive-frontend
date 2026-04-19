@@ -34,8 +34,15 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
-const PAYSTACK_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
+const PAYSTACK_KEY =
+  import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ||
+  import.meta.env.VITE_PAYSTACK_KEY ||
+  import.meta.env.VITE_PUBLIC_PAYSTACK_KEY ||
+  "pk_live_019365ea37124e26f8baec964658b07837520356";
+const BACKEND_URL = (
+  import.meta.env.VITE_BACKEND_URL ||
+  "https://glive-backend.onrender.com"
+).replace(/\/$/, "");
 const PAYSTACK_SCRIPT_SRC = "https://js.paystack.co/v1/inline.js";
 
 function loadPaystackScript() {
@@ -66,6 +73,11 @@ function loadPaystackScript() {
     };
 
     if (existingScript) {
+      if (window.PaystackPop) {
+        resolve(window.PaystackPop);
+        return;
+      }
+
       existingScript.addEventListener("load", handleLoad, { once: true });
       existingScript.addEventListener("error", handleError, { once: true });
 
@@ -74,6 +86,10 @@ function loadPaystackScript() {
           finish(() => resolve(window.PaystackPop));
         }
       }, 300);
+
+      window.setTimeout(() => {
+        finish(() => reject(new Error("Timed out while waiting for Paystack script.")));
+      }, 5000);
       return;
     }
 
@@ -83,6 +99,10 @@ function loadPaystackScript() {
     script.onload = handleLoad;
     script.onerror = handleError;
     document.body.appendChild(script);
+
+    window.setTimeout(() => {
+      finish(() => reject(new Error("Timed out while loading Paystack script.")));
+    }, 5000);
   });
 }
 
@@ -246,6 +266,10 @@ function LiveViewer() {
   const recharge = () => {
     requireLogin(async () => {
       if (isRecharging) return;
+      if (!PAYSTACK_KEY) {
+        alert("Paystack public key is missing. Add VITE_PAYSTACK_PUBLIC_KEY to the frontend environment and redeploy.");
+        return;
+      }
 
       const rechargeAmount = 1000;
       const txRef = "GLIVE_" + Date.now();
@@ -284,7 +308,7 @@ function LiveViewer() {
         handler.openIframe();
       } catch (error) {
         console.error("Unable to launch Paystack:", error);
-        alert("Payment service is not available right now.");
+        alert(error?.message || "Payment service is not available right now.");
         setIsRecharging(false);
       }
     });
