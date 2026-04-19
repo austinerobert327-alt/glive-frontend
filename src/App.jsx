@@ -56,7 +56,6 @@ function WatchPage() {
 
   return (
     <div className="watch-page">
-
       <div className="live-grid">
         {streams.map(stream => (
           <div
@@ -70,7 +69,6 @@ function WatchPage() {
         ))}
       </div>
 
-      {/* 🔥 LOGOUT */}
       <div
         onClick={handleLogout}
         style={{
@@ -85,7 +83,6 @@ function WatchPage() {
       >
         Logout
       </div>
-
     </div>
   );
 }
@@ -113,13 +110,11 @@ function LiveViewer() {
   const commentRef = useRef(null);
   const [sessionStart] = useState(Date.now());
 
-  /* AUTH */
   useEffect(() => {
     const auth = getAuth();
     return onAuthStateChanged(auth, (u) => setUser(u));
   }, []);
 
-  /* WALLET */
   useEffect(() => {
     if (!user) return;
     const ref = doc(db, "users", user.uid);
@@ -129,7 +124,6 @@ function LiveViewer() {
     });
   }, [user]);
 
-  /* GOOGLE LOGIN */
   const handleGoogleLogin = async () => {
     try {
       const auth = getAuth();
@@ -169,6 +163,7 @@ function LiveViewer() {
     });
   };
 
+  /* 🔥 FIXED RECHARGE */
   const recharge = () => {
     requireLogin(() => {
       const handler = window.PaystackPop.setup({
@@ -176,7 +171,23 @@ function LiveViewer() {
         email: user.email,
         amount: 1000 * 100,
         ref: "GLIVE_" + Date.now(),
-        callback: function () { }
+
+        callback: async function (response) {
+          try {
+            await fetch("http://localhost:5000/verify-payment", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                reference: response.reference,
+                userId: user.uid
+              })
+            });
+          } catch (err) {
+            console.log(err);
+          }
+        }
       });
 
       handler.openIframe();
@@ -235,7 +246,6 @@ function LiveViewer() {
     }
   }, [comments]);
 
-  /* VIDEO FETCH (UNCHANGED) */
   useEffect(() => {
     const fetchVideo = async () => {
       try {
