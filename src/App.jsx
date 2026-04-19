@@ -19,7 +19,8 @@ import {
   serverTimestamp,
   doc,
   setDoc,
-  increment
+  increment,
+  runTransaction
 } from "firebase/firestore";
 
 import {
@@ -107,6 +108,7 @@ function LiveViewer() {
   const [showGift, setShowGift] = useState(false);
   const [giftAnim, setGiftAnim] = useState(null);
   const [viewers, setViewers] = useState(10000);
+  const [isRecharging, setIsRecharging] = useState(false);
 
   const [showLogin, setShowLogin] = useState(false);
 
@@ -170,13 +172,57 @@ function LiveViewer() {
   };
 
   const recharge = () => {
-    requireLogin(() => {
+    requireLogin(async () => {
+      if (isRecharging) return;
+      if (!window.PaystackPop) {
+        alert("Payment service is not available right now.");
+        return;
+      }
+
+      const rechargeAmount = 1000;
+      const txRef = "GLIVE_" + Date.now();
+
+      setIsRecharging(true);
+
       const handler = window.PaystackPop.setup({
         key: PAYSTACK_KEY,
         email: user.email,
-        amount: 1000 * 100,
-        ref: "GLIVE_" + Date.now(),
-        callback: function () { }
+        amount: rechargeAmount * 100,
+        ref: txRef,
+        callback: async function (response) {
+          try {
+            const paymentRef = response?.reference || txRef;
+            const userRef = doc(db, "users", user.uid);
+            const paymentRefDoc = doc(db, "payments", paymentRef);
+
+            await runTransaction(db, async (transaction) => {
+              const paymentSnap = await transaction.get(paymentRefDoc);
+
+              if (paymentSnap.exists()) return;
+
+              transaction.set(paymentRefDoc, {
+                uid: user.uid,
+                email: user.email,
+                amount: rechargeAmount,
+                reference: paymentRef,
+                createdAt: serverTimestamp()
+              });
+
+              transaction.set(userRef, {
+                email: user.email,
+                coins: increment(rechargeAmount)
+              }, { merge: true });
+            });
+          } catch (error) {
+            console.error("Recharge credit failed:", error);
+            alert("Payment was received, but wallet update failed. Please contact support with your payment reference.");
+          } finally {
+            setIsRecharging(false);
+          }
+        },
+        onClose: function () {
+          setIsRecharging(false);
+        }
       });
 
       handler.openIframe();
@@ -369,7 +415,7 @@ function LiveViewer() {
           <button className="send-btn" onClick={sendMessage}>Send</button>
         </div>
 
-        <button className="gift-btn" onClick={() => (coins === 0 ? recharge() : setShowGift(true))}>🎁</button>
+        <button className="gift-btn" onClick={() => setShowGift(true)}>🎁</button>
         <button className="like-btn" onClick={sendLike}>❤️</button>
       </div>
 
