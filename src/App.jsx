@@ -56,6 +56,7 @@ function WatchPage() {
 
   return (
     <div className="watch-page">
+
       <div className="live-grid">
         {streams.map(stream => (
           <div
@@ -83,6 +84,7 @@ function WatchPage() {
       >
         Logout
       </div>
+
     </div>
   );
 }
@@ -90,6 +92,7 @@ function WatchPage() {
 /* LIVE VIEW */
 function LiveViewer() {
   const { id } = useParams();
+
   const stream = streams.find(s => s.id === Number(id)) || streams[0];
 
   const [videoId, setVideoId] = useState(null);
@@ -103,16 +106,19 @@ function LiveViewer() {
   const [showGift, setShowGift] = useState(false);
   const [giftAnim, setGiftAnim] = useState(null);
   const [viewers, setViewers] = useState(10000);
+
   const [showLogin, setShowLogin] = useState(false);
 
   const commentRef = useRef(null);
   const [sessionStart] = useState(Date.now());
 
+  /* AUTH */
   useEffect(() => {
     const auth = getAuth();
     return onAuthStateChanged(auth, (u) => setUser(u));
   }, []);
 
+  /* WALLET */
   useEffect(() => {
     if (!user) return;
     const ref = doc(db, "users", user.uid);
@@ -122,6 +128,7 @@ function LiveViewer() {
     });
   }, [user]);
 
+  /* GOOGLE LOGIN */
   const handleGoogleLogin = async () => {
     try {
       const auth = getAuth();
@@ -161,6 +168,7 @@ function LiveViewer() {
     });
   };
 
+  /* 🔥 FIXED PAYSTACK */
   const recharge = () => {
     requireLogin(() => {
       const handler = window.PaystackPop.setup({
@@ -173,7 +181,9 @@ function LiveViewer() {
           try {
             await fetch("http://localhost:5000/verify-payment", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json"
+              },
               body: JSON.stringify({
                 reference: response.reference,
                 userId: user.uid
@@ -279,13 +289,45 @@ function LiveViewer() {
     <div className="live-stream-page">
 
       {showLogin && (
-        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 1000, display: "flex", justifyContent: "center", alignItems: "center" }}>
-          <div style={{ background: "#111", padding: "20px", borderRadius: "12px", width: "80%", maxWidth: "300px", textAlign: "center" }}>
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(0,0,0,0.9)",
+          zIndex: 1000,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center"
+        }}>
+          <div style={{
+            background: "#111",
+            padding: "20px",
+            borderRadius: "12px",
+            width: "80%",
+            maxWidth: "300px",
+            textAlign: "center"
+          }}>
             <h3>Login to continue</h3>
-            <button onClick={handleGoogleLogin} style={{ marginTop: "15px", padding: "12px", width: "100%", borderRadius: "8px", background: "#fff", color: "#000", fontWeight: "bold" }}>
+
+            <button onClick={handleGoogleLogin}
+              style={{
+                marginTop: "15px",
+                padding: "12px",
+                width: "100%",
+                borderRadius: "8px",
+                background: "#fff",
+                color: "#000",
+                fontWeight: "bold"
+              }}>
               Continue with Google
             </button>
-            <button onClick={() => setShowLogin(false)} style={{ marginTop: "10px", background: "transparent", color: "#ccc", border: "none" }}>
+
+            <button onClick={() => setShowLogin(false)}
+              style={{
+                marginTop: "10px",
+                background: "transparent",
+                color: "#ccc",
+                border: "none"
+              }}>
               Cancel
             </button>
           </div>
@@ -316,7 +358,9 @@ function LiveViewer() {
 
       <div className="like-container">
         {likes.map(l => (
-          <span key={l.id} className="heart" style={{ color: l.color }}>❤️</span>
+          <span key={l.id} className="heart" style={{ color: l.color }}>
+            ❤️
+          </span>
         ))}
       </div>
 
@@ -324,7 +368,11 @@ function LiveViewer() {
 
       <div className="bottom-bar">
         <div className="input-box">
-          <input placeholder="Comment..." value={input} onChange={(e) => setInput(e.target.value)} />
+          <input
+            placeholder="Comment..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+          />
           <button className="send-btn" onClick={sendMessage}>Send</button>
         </div>
 
