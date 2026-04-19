@@ -159,6 +159,16 @@ function getPlaylistEmbedUrl(playlistId) {
   return `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&mute=1&playsinline=1`;
 }
 
+async function fetchLiveVideoId(channelId) {
+  if (!API_KEY || !channelId) return null;
+
+  const liveItems = await fetchYouTubeSearch(
+    `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&videoEmbeddable=true&videoSyndicated=true&maxResults=1&key=${API_KEY}`
+  );
+
+  return liveItems[0]?.id?.videoId || null;
+}
+
 /* STREAMS */
 const streams = [
   { id: 0, title: "NSPPD", username: "pastorjerryeze", channelId: "UCLg4NCAJxhIvD4IRV__LOFg", thumb: jerryImage },
@@ -172,10 +182,45 @@ const streams = [
 function WatchPage() {
   const navigate = useNavigate();
   const auth = getAuth();
+  const [liveMap, setLiveMap] = useState({});
 
   const handleLogout = async () => {
     await signOut(auth);
   };
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchLiveStatuses = async () => {
+      if (!API_KEY) {
+        if (active) setLiveMap({});
+        return;
+      }
+
+      try {
+        const results = await Promise.all(
+          streams.map(async (stream) => {
+            const liveVideoId = await fetchLiveVideoId(stream.channelId);
+            return [stream.id, Boolean(liveVideoId)];
+          })
+        );
+
+        if (!active) return;
+        setLiveMap(Object.fromEntries(results));
+      } catch (error) {
+        console.error("Unable to fetch watch-page live statuses:", error);
+        if (active) setLiveMap({});
+      }
+    };
+
+    fetchLiveStatuses();
+    const interval = window.setInterval(fetchLiveStatuses, 60000);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   return (
     <div className="watch-page">
@@ -187,6 +232,7 @@ function WatchPage() {
             className="live-card"
             onClick={() => navigate(`/live/${stream.id}`)}
           >
+            {liveMap[stream.id] && <div className="live-badge">LIVE</div>}
             <img src={stream.thumb} />
             <div className="live-card-title">{stream.title}</div>
           </div>
