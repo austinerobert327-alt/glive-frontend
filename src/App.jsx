@@ -70,6 +70,7 @@ function WatchPage() {
         ))}
       </div>
 
+      {/* 🔥 LOGOUT */}
       <div
         onClick={handleLogout}
         style={{
@@ -168,7 +169,6 @@ function LiveViewer() {
     });
   };
 
-  /* 🔥 FIXED PAYSTACK */
   const recharge = () => {
     requireLogin(() => {
       const handler = window.PaystackPop.setup({
@@ -176,23 +176,7 @@ function LiveViewer() {
         email: user.email,
         amount: 1000 * 100,
         ref: "GLIVE_" + Date.now(),
-
-        callback: async function (response) {
-          try {
-            await fetch("http://localhost:5000/verify-payment", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                reference: response.reference,
-                userId: user.uid
-              })
-            });
-          } catch (err) {
-            console.log(err);
-          }
-        }
+        callback: function () { }
       });
 
       handler.openIframe();
@@ -251,6 +235,7 @@ function LiveViewer() {
     }
   }, [comments]);
 
+  /* VIDEO FETCH (UNCHANGED) */
   useEffect(() => {
     const fetchVideo = async () => {
       try {
@@ -335,9 +320,17 @@ function LiveViewer() {
       )}
 
       <div className="video-container">
-        {loadingVideo ? <div className="no-video">Loading...</div> :
-          videoId ? <iframe src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`} allow="autoplay; fullscreen" allowFullScreen /> :
-            <div className="no-video">Live not available</div>}
+        {loadingVideo ? (
+          <div className="no-video">Loading...</div>
+        ) : videoId ? (
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`}
+            allow="autoplay; fullscreen"
+            allowFullScreen
+          />
+        ) : (
+          <div className="no-video">Live not available</div>
+        )}
       </div>
 
       <div className="top-left">
@@ -376,18 +369,7 @@ function LiveViewer() {
           <button className="send-btn" onClick={sendMessage}>Send</button>
         </div>
 
-        <button
-          className="gift-btn"
-          onClick={() =>
-            requireLogin(() => {
-              if (coins === 0) recharge();
-              else setShowGift(true);
-            })
-          }
-        >
-          🎁
-        </button>
-
+        <button className="gift-btn" onClick={() => (coins === 0 ? recharge() : setShowGift(true))}>🎁</button>
         <button className="like-btn" onClick={sendLike}>❤️</button>
       </div>
 
