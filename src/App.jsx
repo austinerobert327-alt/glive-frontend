@@ -129,6 +129,18 @@ async function verifyPaymentOnBackend(reference, userId) {
   return data;
 }
 
+async function processRechargeVerification(reference, userId, fallbackRef, setIsRecharging) {
+  try {
+    const paymentRef = reference || fallbackRef;
+    await verifyPaymentOnBackend(paymentRef, userId);
+  } catch (error) {
+    console.error("Recharge verification failed:", error);
+    alert(`Payment was completed, but wallet verification failed. Reference: ${reference || fallbackRef}`);
+  } finally {
+    setIsRecharging(false);
+  }
+}
+
 /* STREAMS */
 const streams = [
   { id: 0, title: "NSPPD", username: "pastorjerryeze", thumb: jerryImage },
@@ -278,6 +290,13 @@ function LiveViewer() {
 
       try {
         const PaystackPop = await loadPaystackScript();
+        const handlePaystackSuccess = function (response) {
+          processRechargeVerification(response?.reference, user.uid, txRef, setIsRecharging);
+        };
+
+        const handlePaystackClose = function () {
+          setIsRecharging(false);
+        };
 
         const handler = PaystackPop.setup({
           key: PAYSTACK_KEY,
@@ -289,20 +308,8 @@ function LiveViewer() {
             userId: user.uid,
             email: user.email
           },
-          callback: async function (response) {
-            try {
-              const paymentRef = response?.reference || txRef;
-              await verifyPaymentOnBackend(paymentRef, user.uid);
-            } catch (error) {
-              console.error("Recharge verification failed:", error);
-              alert(`Payment was completed, but wallet verification failed. Reference: ${response?.reference || txRef}`);
-            } finally {
-              setIsRecharging(false);
-            }
-          },
-          onClose: function () {
-            setIsRecharging(false);
-          }
+          callback: handlePaystackSuccess,
+          onClose: handlePaystackClose
         });
 
         handler.openIframe();
