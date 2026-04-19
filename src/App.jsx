@@ -26,7 +26,8 @@ import {
   getAuth,
   onAuthStateChanged,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  signOut
 } from "firebase/auth";
 
 import Login from "./pages/Login";
@@ -47,9 +48,15 @@ const streams = [
 /* WATCH PAGE */
 function WatchPage() {
   const navigate = useNavigate();
+  const auth = getAuth();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
 
   return (
     <div className="watch-page">
+
       <div className="live-grid">
         {streams.map(stream => (
           <div
@@ -62,6 +69,23 @@ function WatchPage() {
           </div>
         ))}
       </div>
+
+      {/* 🔥 LOGOUT */}
+      <div
+        onClick={handleLogout}
+        style={{
+          position: "absolute",
+          bottom: "10px",
+          width: "100%",
+          textAlign: "center",
+          fontSize: "13px",
+          color: "#aaa",
+          cursor: "pointer"
+        }}
+      >
+        Logout
+      </div>
+
     </div>
   );
 }
@@ -105,7 +129,7 @@ function LiveViewer() {
     });
   }, [user]);
 
-  /* 🔥 GOOGLE LOGIN */
+  /* GOOGLE LOGIN */
   const handleGoogleLogin = async () => {
     try {
       const auth = getAuth();
@@ -123,7 +147,6 @@ function LiveViewer() {
     }
   };
 
-  /* 🔥 REQUIRE LOGIN WRAPPER */
   const requireLogin = (action) => {
     if (!user) {
       setShowLogin(true);
@@ -132,7 +155,6 @@ function LiveViewer() {
     action();
   };
 
-  /* COMMENTS */
   const sendMessage = async () => {
     requireLogin(async () => {
       if (!input.trim()) return;
@@ -147,7 +169,6 @@ function LiveViewer() {
     });
   };
 
-  /* PAYSTACK */
   const recharge = () => {
     requireLogin(() => {
       const handler = window.PaystackPop.setup({
@@ -176,7 +197,6 @@ function LiveViewer() {
     });
   };
 
-  /* LIKES */
   const sendLike = () => {
     const id = Date.now();
     const colors = ["#ff2d55", "#ff9500", "#00e676"];
@@ -191,10 +211,32 @@ function LiveViewer() {
     }, 2500);
   };
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setViewers(v => v + Math.floor(Math.random() * 5));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, "comments"), orderBy("createdAt"), limit(50));
+    return onSnapshot(q, (snap) => {
+      const filtered = snap.docs.map(d => d.data()).filter(c => {
+        if (!c.createdAt) return false;
+        return c.createdAt.toMillis() >= sessionStart;
+      });
+      setComments(filtered);
+    });
+  }, [sessionStart]);
+
+  useEffect(() => {
+    if (commentRef.current) {
+      commentRef.current.scrollTop = commentRef.current.scrollHeight;
+    }
+  }, [comments]);
+
   /* VIDEO FETCH (UNCHANGED) */
   useEffect(() => {
-    let isMounted = true;
-
     const fetchVideo = async () => {
       try {
         const res = await fetch(
@@ -231,7 +273,6 @@ function LiveViewer() {
   return (
     <div className="live-stream-page">
 
-      {/* LOGIN POPUP */}
       {showLogin && (
         <div style={{
           position: "absolute",
@@ -278,7 +319,6 @@ function LiveViewer() {
         </div>
       )}
 
-      {/* VIDEO */}
       <div className="video-container">
         {loadingVideo ? (
           <div className="no-video">Loading...</div>

@@ -2,7 +2,8 @@ import { useState } from "react";
 import {
   getAuth,
   createUserWithEmailAndPassword,
-  updateProfile
+  updateProfile,
+  signInWithEmailAndPassword
 } from "firebase/auth";
 import { useNavigate, Link } from "react-router-dom";
 import { db } from "../firebase";
@@ -36,7 +37,6 @@ function Register() {
         displayName: username
       });
 
-      /* CREATE WALLET */
       await setDoc(doc(db, "users", user.uid), {
         username: username,
         email: user.email,
@@ -48,8 +48,15 @@ function Register() {
 
     } catch (err) {
 
+      /* 🔥 AUTO LOGIN IF EMAIL EXISTS */
       if (err.code === "auth/email-already-in-use") {
-        setErrorMsg("Email already in use");
+        try {
+          const res = await signInWithEmailAndPassword(auth, email, password);
+          navigate("/");
+        } catch {
+          setErrorMsg("Account exists. Try logging in");
+        }
+
       } else if (err.code === "auth/invalid-email") {
         setErrorMsg("Invalid email");
       } else if (err.code === "auth/weak-password") {
@@ -85,7 +92,6 @@ function Register() {
 
         <h2 style={{ textAlign: "center", color: "white" }}>Create Account</h2>
 
-        {/* 🔴 ERROR MESSAGE */}
         {errorMsg && (
           <p style={{ color: "red", fontSize: "13px", textAlign: "center" }}>
             {errorMsg}
