@@ -68,6 +68,8 @@ function LiveViewer() {
   const stream = streams.find(s => s.id === Number(id)) || streams[0];
 
   const [videoId, setVideoId] = useState(null);
+  const [loadingVideo, setLoadingVideo] = useState(true);
+
   const [user, setUser] = useState(null);
   const [coins, setCoins] = useState(0);
   const [comments, setComments] = useState([]);
@@ -88,59 +90,83 @@ function LiveViewer() {
     return () => clearInterval(interval);
   }, []);
 
-  /* 🔥 VIDEO FETCH (PROPER METHOD) */
+  /* 🔥 FIXED VIDEO FETCH (ULTRA RELIABLE) */
   useEffect(() => {
+    let isMounted = true;
+
+    const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+
     const fetchVideo = async () => {
+      setLoadingVideo(true);
+
       try {
-        // Get channel ID
-        let channelId;
+        let channelId = null;
 
-        const channelRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/channels?part=id&forUsername=${stream.username}&key=${API_KEY}`
+        // STEP 1: ALWAYS USE SEARCH (MOST RELIABLE)
+        const searchChannel = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${stream.username}&type=channel&maxResults=1&key=${API_KEY}`
         );
-        const channelData = await channelRes.json();
-        channelId = channelData.items?.[0]?.id;
+        const channelData = await searchChannel.json();
+        channelId = channelData.items?.[0]?.snippet?.channelId;
 
-        // fallback search
         if (!channelId) {
-          const searchRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${stream.username}&type=channel&key=${API_KEY}`
+          if (isMounted) {
+            setVideoId(null);
+            setLoadingVideo(false);
+          }
+          return;
+        }
+
+        // STEP 2: TRY LIVE (with retry)
+        let liveVideo = null;
+
+        for (let i = 0; i < 3; i++) {
+          const liveRes = await fetch(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${API_KEY}`
           );
-          const searchData = await searchRes.json();
-          channelId = searchData.items?.[0]?.snippet?.channelId;
+          const liveData = await liveRes.json();
+
+          if (liveData.items?.length > 0) {
+            liveVideo = liveData.items[0].id.videoId;
+            break;
+          }
+
+          await sleep(800); // retry delay
         }
 
-        if (!channelId) {
-          setVideoId(null);
+        if (liveVideo) {
+          if (isMounted) {
+            setVideoId(liveVideo);
+            setLoadingVideo(false);
+          }
           return;
         }
 
-        // LIVE
-        const liveRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${API_KEY}`
-        );
-        const liveData = await liveRes.json();
-
-        if (liveData.items?.length > 0) {
-          setVideoId(liveData.items[0].id.videoId);
-          return;
-        }
-
-        // FALLBACK
+        // STEP 3: FALLBACK (LATEST VIDEO)
         const latestRes = await fetch(
           `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&maxResults=1&key=${API_KEY}`
         );
         const latestData = await latestRes.json();
 
-        setVideoId(latestData.items?.[0]?.id?.videoId || null);
+        if (isMounted) {
+          setVideoId(latestData.items?.[0]?.id?.videoId || null);
+          setLoadingVideo(false);
+        }
 
       } catch (err) {
         console.log(err);
-        setVideoId(null);
+        if (isMounted) {
+          setVideoId(null);
+          setLoadingVideo(false);
+        }
       }
     };
 
     fetchVideo();
+
+    return () => {
+      isMounted = false;
+    };
   }, [stream]);
 
   /* AUTH */
@@ -235,9 +261,11 @@ function LiveViewer() {
     <div className="live-stream-page">
 
       <div className="video-container">
-        {videoId ? (
+        {loadingVideo ? (
+          <div className="no-video">Loading...</div>
+        ) : videoId ? (
           <iframe
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0`}
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`}
             allow="autoplay; fullscreen"
             allowFullScreen
           />
