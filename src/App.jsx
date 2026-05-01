@@ -146,11 +146,11 @@ function getUploadsPlaylistId(channelId) {
 }
 
 function getLiveEmbedUrl(channelId) {
-  return `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&mute=1&playsinline=1`;
+  return `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&playsinline=1`;
 }
 
 function getPlaylistEmbedUrl(playlistId) {
-  return `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&mute=1&playsinline=1`;
+  return `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&playsinline=1`;
 }
 
 /* STREAMS */
@@ -168,8 +168,6 @@ function WatchPage() {
   const auth = getAuth();
   const [videos, setVideos] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
-  const [showAlarmSheet, setShowAlarmSheet] = useState(false);
-  const [prayerAlarm, setPrayerAlarm] = useState("");
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -228,7 +226,7 @@ function WatchPage() {
   return (
     <div className="watch-page">
       <div className="watch-header">
-        <h1>NSPPD</h1>
+        <h1>Streamsofjoy TV</h1>
       </div>
 
       <div className="video-list">
@@ -258,27 +256,6 @@ function WatchPage() {
 
       <div className="watch-footer">
         <button type="button" onClick={handleLogout}>Logout</button>
-        <button type="button" onClick={() => setShowAlarmSheet(true)}>Set Prayer Alarm</button>
-      </div>
-
-      <div className={`bottom-sheet ${showAlarmSheet ? "active" : ""}`}>
-        <div className="sheet-handle" />
-        <h3>Set Prayer Alarm</h3>
-        <div className="sheet-options">
-          {["Call", "SMS", "Notification"].map((option) => (
-            <button
-              key={option}
-              className={prayerAlarm === option ? "selected" : ""}
-              type="button"
-              onClick={() => setPrayerAlarm(option)}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-        <button className="close-btn" type="button" onClick={() => setShowAlarmSheet(false)}>
-          Close
-        </button>
       </div>
     </div>
   );
@@ -545,7 +522,7 @@ function LiveViewer() {
 
       if (routeVideoId) {
         setVideoId(routeVideoId);
-        setVideoSrc(`https://www.youtube.com/embed/${routeVideoId}?autoplay=1&mute=1&playsinline=1`);
+        setVideoSrc(`https://www.youtube.com/embed/${routeVideoId}?autoplay=1&playsinline=1`);
         setLoadingVideo(false);
         return;
       }
@@ -572,7 +549,7 @@ function LiveViewer() {
         if (liveItems.length > 0) {
           const nextVideoId = liveItems[0].id.videoId;
           setVideoId(nextVideoId);
-          setVideoSrc(`https://www.youtube.com/embed/${nextVideoId}?autoplay=1&mute=1&playsinline=1`);
+          setVideoSrc(`https://www.youtube.com/embed/${nextVideoId}?autoplay=1&playsinline=1`);
           setLoadingVideo(false);
           return;
         }
@@ -584,7 +561,7 @@ function LiveViewer() {
         if (completedLiveItems.length > 0) {
           const nextVideoId = completedLiveItems[0].id.videoId;
           setVideoId(nextVideoId);
-          setVideoSrc(`https://www.youtube.com/embed/${nextVideoId}?autoplay=1&mute=1&playsinline=1`);
+          setVideoSrc(`https://www.youtube.com/embed/${nextVideoId}?autoplay=1&playsinline=1`);
           setLoadingVideo(false);
           return;
         }
@@ -597,7 +574,7 @@ function LiveViewer() {
         setVideoId(nextVideoId);
         setVideoSrc(
           nextVideoId
-            ? `https://www.youtube.com/embed/${nextVideoId}?autoplay=1&mute=1&playsinline=1`
+            ? `https://www.youtube.com/embed/${nextVideoId}?autoplay=1&playsinline=1`
             : uploadsPlaylistId
               ? getPlaylistEmbedUrl(uploadsPlaylistId)
               : getLiveEmbedUrl(channelId)
@@ -646,7 +623,7 @@ function LiveViewer() {
       </div>
 
       <div className="top-right">
-        Eye {viewers.toLocaleString()}
+        👁 {viewers.toLocaleString()}
       </div>
 
       <div className="comment-overlay" ref={commentRef}>
@@ -660,7 +637,7 @@ function LiveViewer() {
       <div className="amen-container">
         {amens.map(a => (
           <span key={a.id} className="amen" style={{ color: a.color }}>
-            🙏
+            Amen
           </span>
         ))}
       </div>
@@ -701,7 +678,7 @@ function LiveViewer() {
         </div>
 
         <button className="gift-btn" onClick={() => setShowGift(true)}>🎁</button>
-        <button className="like-btn" onClick={sendAmen}>🙏</button>
+        <button className="amen-btn" onClick={sendAmen}>Amen</button>
         <button className="share-btn" type="button" onClick={shareStream}>Share</button>
         <button className="menu-btn" type="button" onClick={() => setShowMenuSheet(true)}>☰</button>
       </div>
