@@ -2,12 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Routes, Route, useNavigate, useParams } from "react-router-dom";
 import "./App.css";
 
-import jerryImage from "./assets/jerry.jpg";
-import hallelujahImage from "./assets/hallelujah.jpg";
-import dunamisImage from "./assets/dunamis.jpg";
-import rccgImage from "./assets/rccg.jpg";
-import winnersImage from "./assets/winners.jpg";
-
 import { db } from "./firebase";
 import {
   collection,
@@ -159,30 +153,23 @@ function getPlaylistEmbedUrl(playlistId) {
   return `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&mute=1&playsinline=1`;
 }
 
-async function fetchLiveVideoId(channelId) {
-  if (!API_KEY || !channelId) return null;
-
-  const liveItems = await fetchYouTubeSearch(
-    `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&videoEmbeddable=true&videoSyndicated=true&maxResults=1&key=${API_KEY}`
-  );
-
-  return liveItems[0]?.id?.videoId || null;
-}
-
 /* STREAMS */
 const streams = [
-  { id: 0, title: "NSPPD", username: "pastorjerryeze", channelId: "UCLg4NCAJxhIvD4IRV__LOFg", thumb: jerryImage },
-  { id: 1, title: "Hallelujah", username: "NathanielBasseyMain", channelId: "UCRe2Ir9wtPk_YQjElam7n2w", thumb: hallelujahImage },
-  { id: 2, title: "Dunamis", username: "DunamisTV", channelId: "UC0pFEFO86OwhVUcqAQ4ICjQ", thumb: dunamisImage },
-  { id: 3, title: "RCCG", username: "RCCGContinentalTV", channelId: "UCJdR5HjXZ6IKrWuUC3JCOkQ", thumb: rccgImage },
-  { id: 4, title: "Winners", username: "LivingFaithChurchWorldwide", channelId: "UCyUKtrMdDilf74SPkCCKKtw", thumb: winnersImage }
+  {
+    id: 0,
+    title: "NSPPD",
+    channelId: "UCLg4NCAJxhIvD4IRV__LOFg"
+  }
 ];
 
 /* WATCH PAGE */
 function WatchPage() {
   const navigate = useNavigate();
   const auth = getAuth();
-  const [liveMap, setLiveMap] = useState({});
+  const [videos, setVideos] = useState([]);
+  const [loadingVideos, setLoadingVideos] = useState(true);
+  const [showAlarmSheet, setShowAlarmSheet] = useState(false);
+  const [prayerAlarm, setPrayerAlarm] = useState("");
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -190,31 +177,47 @@ function WatchPage() {
 
   useEffect(() => {
     let active = true;
+    const nsppd = streams[0];
 
-    const fetchLiveStatuses = async () => {
+    const fetchNsppdVideos = async () => {
+      setLoadingVideos(true);
+
       if (!API_KEY) {
-        if (active) setLiveMap({});
+        if (active) {
+          setVideos([]);
+          setLoadingVideos(false);
+        }
         return;
       }
 
       try {
-        const results = await Promise.all(
-          streams.map(async (stream) => {
-            const liveVideoId = await fetchLiveVideoId(stream.channelId);
-            return [stream.id, Boolean(liveVideoId)];
-          })
-        );
+        const [liveItems, latestItems] = await Promise.all([
+          fetchYouTubeSearch(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${nsppd.channelId}&eventType=live&order=date&maxResults=1&type=video&key=${API_KEY}`
+          ),
+          fetchYouTubeSearch(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${nsppd.channelId}&order=date&maxResults=10&type=video&key=${API_KEY}`
+          )
+        ]);
+
+        const liveVideoId = liveItems[0]?.id?.videoId || null;
+        const mergedVideos = [
+          ...liveItems.map((item) => ({ ...item, isLive: true })),
+          ...latestItems.filter((item) => item.id?.videoId !== liveVideoId)
+        ].slice(0, 10);
 
         if (!active) return;
-        setLiveMap(Object.fromEntries(results));
+        setVideos(mergedVideos);
       } catch (error) {
-        console.error("Unable to fetch watch-page live statuses:", error);
-        if (active) setLiveMap({});
+        console.error("Unable to fetch NSPPD videos:", error);
+        if (active) setVideos([]);
+      } finally {
+        if (active) setLoadingVideos(false);
       }
     };
 
-    fetchLiveStatuses();
-    const interval = window.setInterval(fetchLiveStatuses, 60000);
+    fetchNsppdVideos();
+    const interval = window.setInterval(fetchNsppdVideos, 60000);
 
     return () => {
       active = false;
@@ -224,37 +227,59 @@ function WatchPage() {
 
   return (
     <div className="watch-page">
+      <div className="watch-header">
+        <h1>NSPPD</h1>
+      </div>
 
-      <div className="live-grid">
-        {streams.map(stream => (
+      <div className="video-list">
+        {loadingVideos && <div className="empty-state">Loading NSPPD videos...</div>}
+
+        {!loadingVideos && videos.length === 0 && (
+          <div className="empty-state">No NSPPD videos available right now.</div>
+        )}
+
+        {videos.map((video) => (
           <div
-            key={stream.id}
-            className="live-card"
-            onClick={() => navigate(`/live/${stream.id}`)}
+            key={video.id.videoId}
+            className="video-list-item"
+            onClick={() => navigate(`/live/${video.id.videoId}`)}
           >
-            {liveMap[stream.id] && <div className="live-badge">LIVE</div>}
-            <img src={stream.thumb} />
-            <div className="live-card-title">{stream.title}</div>
+            <div className="video-thumb-wrap">
+              {video.isLive && <div className="live-badge">LIVE</div>}
+              <img
+                src={video.snippet?.thumbnails?.medium?.url || video.snippet?.thumbnails?.default?.url}
+                alt=""
+              />
+            </div>
+            <div className="video-list-title">{video.snippet?.title}</div>
           </div>
         ))}
       </div>
 
-      {/* 🔥 LOGOUT */}
-      <div
-        onClick={handleLogout}
-        style={{
-          position: "absolute",
-          bottom: "10px",
-          width: "100%",
-          textAlign: "center",
-          fontSize: "13px",
-          color: "#aaa",
-          cursor: "pointer"
-        }}
-      >
-        Logout
+      <div className="watch-footer">
+        <button type="button" onClick={handleLogout}>Logout</button>
+        <button type="button" onClick={() => setShowAlarmSheet(true)}>Set Prayer Alarm</button>
       </div>
 
+      <div className={`bottom-sheet ${showAlarmSheet ? "active" : ""}`}>
+        <div className="sheet-handle" />
+        <h3>Set Prayer Alarm</h3>
+        <div className="sheet-options">
+          {["Call", "SMS", "Notification"].map((option) => (
+            <button
+              key={option}
+              className={prayerAlarm === option ? "selected" : ""}
+              type="button"
+              onClick={() => setPrayerAlarm(option)}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+        <button className="close-btn" type="button" onClick={() => setShowAlarmSheet(false)}>
+          Close
+        </button>
+      </div>
     </div>
   );
 }
@@ -262,8 +287,9 @@ function WatchPage() {
 /* LIVE VIEW */
 function LiveViewer() {
   const { id } = useParams();
-
-  const stream = streams.find(s => s.id === Number(id)) || streams[0];
+  const matchedStream = streams.find(s => String(s.id) === id);
+  const routeVideoId = matchedStream ? null : id;
+  const stream = matchedStream || streams[0];
 
   const [videoId, setVideoId] = useState(null);
   const [videoSrc, setVideoSrc] = useState(null);
@@ -272,14 +298,22 @@ function LiveViewer() {
   const [user, setUser] = useState(null);
   const [coins, setCoins] = useState(0);
   const [comments, setComments] = useState([]);
+  const [testimonies, setTestimonies] = useState([]);
   const [input, setInput] = useState("");
-  const [likes, setLikes] = useState([]);
+  const [amens, setAmens] = useState([]);
   const [showGift, setShowGift] = useState(false);
   const [giftAnim, setGiftAnim] = useState(null);
   const [viewers, setViewers] = useState(10000);
   const [isRecharging, setIsRecharging] = useState(false);
-
   const [showLogin, setShowLogin] = useState(false);
+  const [showMenuSheet, setShowMenuSheet] = useState(false);
+  const [showPrayerForm, setShowPrayerForm] = useState(false);
+  const [showTestimoniesPanel, setShowTestimoniesPanel] = useState(false);
+  const [showTestimonyForm, setShowTestimonyForm] = useState(false);
+  const [prayerName, setPrayerName] = useState("");
+  const [prayerText, setPrayerText] = useState("");
+  const [testimonyName, setTestimonyName] = useState("");
+  const [testimonyText, setTestimonyText] = useState("");
 
   const commentRef = useRef(null);
   const [sessionStart] = useState(Date.now());
@@ -400,18 +434,76 @@ function LiveViewer() {
     });
   };
 
-  const sendLike = () => {
+  const sendAmen = () => {
     const id = Date.now();
-    const colors = ["#ff2d55", "#ff9500", "#00e676"];
+    const colors = ["#f9d66d", "#ffffff", "#9ff3c8"];
 
-    setLikes(prev => [...prev, {
+    setAmens(prev => [...prev, {
       id,
       color: colors[Math.floor(Math.random() * colors.length)]
     }]);
 
     setTimeout(() => {
-      setLikes(prev => prev.filter(l => l.id !== id));
+      setAmens(prev => prev.filter(a => a.id !== id));
     }, 2500);
+  };
+
+  const shareStream = async () => {
+    const shareData = {
+      title: "NSPPD on GLive",
+      text: "Join this NSPPD stream.",
+      url: window.location.href
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert("Link copied");
+      }
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        console.error("Unable to share stream:", error);
+      }
+    }
+  };
+
+  const submitPrayer = async (event) => {
+    event.preventDefault();
+    requireLogin(async () => {
+      if (!prayerText.trim()) return;
+
+      await addDoc(collection(db, "prayers"), {
+        name: prayerName.trim(),
+        text: prayerText.trim(),
+        createdAt: serverTimestamp()
+      });
+
+      setPrayerName("");
+      setPrayerText("");
+      setShowPrayerForm(false);
+      setShowMenuSheet(false);
+    });
+  };
+
+  const submitTestimony = async (event) => {
+    event.preventDefault();
+    requireLogin(async () => {
+      if (!testimonyText.trim()) return;
+
+      await addDoc(collection(db, "testimonies"), {
+        name: testimonyName.trim(),
+        text: testimonyText.trim(),
+        createdAt: serverTimestamp()
+      });
+
+      setTestimonyName("");
+      setTestimonyText("");
+      setShowTestimonyForm(false);
+      setShowMenuSheet(false);
+      setShowTestimoniesPanel(false);
+    });
   };
 
   useEffect(() => {
@@ -433,17 +525,30 @@ function LiveViewer() {
   }, [sessionStart]);
 
   useEffect(() => {
+    const q = query(collection(db, "testimonies"), orderBy("createdAt"), limit(20));
+    return onSnapshot(q, (snap) => {
+      setTestimonies(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+  }, []);
+
+  useEffect(() => {
     if (commentRef.current) {
       commentRef.current.scrollTop = commentRef.current.scrollHeight;
     }
   }, [comments]);
 
-  /* VIDEO FETCH (UNCHANGED) */
   useEffect(() => {
     const fetchVideo = async () => {
       setLoadingVideo(true);
       setVideoId(null);
       setVideoSrc(null);
+
+      if (routeVideoId) {
+        setVideoId(routeVideoId);
+        setVideoSrc(`https://www.youtube.com/embed/${routeVideoId}?autoplay=1&mute=1&playsinline=1`);
+        setLoadingVideo(false);
+        return;
+      }
 
       const channelId = stream.channelId;
       const uploadsPlaylistId = getUploadsPlaylistId(channelId);
@@ -506,51 +611,20 @@ function LiveViewer() {
     };
 
     fetchVideo();
-  }, [stream]);
+  }, [routeVideoId, stream]);
 
   return (
     <div className="live-stream-page">
-
       {showLogin && (
-        <div style={{
-          position: "absolute",
-          inset: 0,
-          background: "rgba(0,0,0,0.9)",
-          zIndex: 1000,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center"
-        }}>
-          <div style={{
-            background: "#111",
-            padding: "20px",
-            borderRadius: "12px",
-            width: "80%",
-            maxWidth: "300px",
-            textAlign: "center"
-          }}>
+        <div className="login-overlay">
+          <div className="login-card">
             <h3>Login to continue</h3>
 
-            <button onClick={handleGoogleLogin}
-              style={{
-                marginTop: "15px",
-                padding: "12px",
-                width: "100%",
-                borderRadius: "8px",
-                background: "#fff",
-                color: "#000",
-                fontWeight: "bold"
-              }}>
+            <button onClick={handleGoogleLogin}>
               Continue with Google
             </button>
 
-            <button onClick={() => setShowLogin(false)}
-              style={{
-                marginTop: "10px",
-                background: "transparent",
-                color: "#ccc",
-                border: "none"
-              }}>
+            <button onClick={() => setShowLogin(false)}>
               Cancel
             </button>
           </div>
@@ -571,14 +645,8 @@ function LiveViewer() {
         )}
       </div>
 
-      <div className="top-left">
-        <button className="wallet-btn" type="button" onClick={recharge} disabled={isRecharging}>
-          🪙 {isRecharging ? "Loading..." : coins}
-        </button>
-      </div>
-
       <div className="top-right">
-        👁 {viewers.toLocaleString()}
+        Eye {viewers.toLocaleString()}
       </div>
 
       <div className="comment-overlay" ref={commentRef}>
@@ -589,15 +657,38 @@ function LiveViewer() {
         ))}
       </div>
 
-      <div className="like-container">
-        {likes.map(l => (
-          <span key={l.id} className="heart" style={{ color: l.color }}>
-            ❤️
+      <div className="amen-container">
+        {amens.map(a => (
+          <span key={a.id} className="amen" style={{ color: a.color }}>
+            🙏
           </span>
         ))}
       </div>
 
-      {giftAnim && <div className="gift-center">{giftAnim}</div>}
+      {giftAnim && (
+        <div className="gift-center">
+          <span>{giftAnim}</span>
+          <i />
+          <i />
+          <i />
+          <i />
+          <i />
+          <i />
+        </div>
+      )}
+
+      {testimonies.length > 0 && (
+        <div className="testimony-ticker">
+          <div className="testimony-track">
+            {[...testimonies, ...testimonies].map((item, index) => (
+              <div className="testimony-item" key={`${item.id}-${index}`}>
+                <strong>{item.name || "Anonymous"}</strong>
+                <span>{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bottom-bar">
         <div className="input-box">
@@ -610,10 +701,19 @@ function LiveViewer() {
         </div>
 
         <button className="gift-btn" onClick={() => setShowGift(true)}>🎁</button>
-        <button className="like-btn" onClick={sendLike}>❤️</button>
+        <button className="like-btn" onClick={sendAmen}>🙏</button>
+        <button className="share-btn" type="button" onClick={shareStream}>Share</button>
+        <button className="menu-btn" type="button" onClick={() => setShowMenuSheet(true)}>☰</button>
       </div>
 
       <div className={`gift-modal ${showGift ? "active" : ""}`}>
+        <div className="sheet-handle" />
+        <div className="gift-balance">
+          <span>Balance: {coins}</span>
+          <button type="button" onClick={recharge} disabled={isRecharging}>
+            {isRecharging ? "Loading..." : "Recharge"}
+          </button>
+        </div>
         <div className="gift-grid">
           <div onClick={() => sendGift(5, "🎁")}>🎁 5</div>
           <div onClick={() => sendGift(20, "💎")}>💎 20</div>
@@ -622,6 +722,81 @@ function LiveViewer() {
         <button className="close-btn" onClick={() => setShowGift(false)}>Close</button>
       </div>
 
+      <div className={`bottom-sheet ${showMenuSheet ? "active" : ""}`}>
+        <div className="sheet-handle" />
+        <div className="sheet-options">
+          <button type="button" onClick={() => setShowPrayerForm(true)}>Prayer Request</button>
+          <button type="button" onClick={() => setShowTestimoniesPanel(true)}>Testimonies</button>
+        </div>
+        <button className="close-btn" type="button" onClick={() => setShowMenuSheet(false)}>
+          Close
+        </button>
+      </div>
+
+      <div className={`bottom-sheet testimonies-panel ${showTestimoniesPanel ? "active" : ""}`}>
+        <div className="sheet-handle" />
+        <h3>Testimonies</h3>
+        <div className="testimony-sheet-list">
+          {testimonies.length === 0 ? (
+            <div className="empty-state">No testimonies yet.</div>
+          ) : (
+            <div className="testimony-track">
+              {[...testimonies, ...testimonies].map((item, index) => (
+                <div className="testimony-item" key={`sheet-${item.id}-${index}`}>
+                  <strong>{item.name || "Anonymous"}</strong>
+                  <span>{item.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <button className="write-btn" type="button" onClick={() => setShowTestimonyForm(true)}>
+          Write Testimony
+        </button>
+        <button className="close-btn" type="button" onClick={() => setShowTestimoniesPanel(false)}>
+          Close
+        </button>
+      </div>
+
+      {showPrayerForm && (
+        <div className="form-sheet">
+          <form onSubmit={submitPrayer}>
+            <h3>Prayer Request</h3>
+            <input
+              placeholder="Name (optional)"
+              value={prayerName}
+              onChange={(event) => setPrayerName(event.target.value)}
+            />
+            <textarea
+              placeholder="Your prayer request"
+              value={prayerText}
+              onChange={(event) => setPrayerText(event.target.value)}
+            />
+            <button type="submit">Submit</button>
+            <button type="button" onClick={() => setShowPrayerForm(false)}>Cancel</button>
+          </form>
+        </div>
+      )}
+
+      {showTestimonyForm && (
+        <div className="form-sheet">
+          <form onSubmit={submitTestimony}>
+            <h3>Write Testimony</h3>
+            <input
+              placeholder="Name (optional)"
+              value={testimonyName}
+              onChange={(event) => setTestimonyName(event.target.value)}
+            />
+            <textarea
+              placeholder="Your testimony"
+              value={testimonyText}
+              onChange={(event) => setTestimonyText(event.target.value)}
+            />
+            <button type="submit">Submit</button>
+            <button type="button" onClick={() => setShowTestimonyForm(false)}>Cancel</button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
