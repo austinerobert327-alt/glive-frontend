@@ -186,7 +186,7 @@ button {
   max-height: 28%;
   overflow-y: auto;
   z-index: 20;
-  bottom: 176px;
+  bottom: 158px;
 }
 
 .comment-overlay::-webkit-scrollbar {
@@ -259,19 +259,26 @@ button {
   position: absolute;
   left: 0;
   width: 100%;
-  display: grid;
-  grid-template-columns: 1fr auto auto auto auto;
-  align-items: center;
-  gap: 8px;
-  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  bottom: 12px;
   padding: 10px 12px;
   z-index: 30;
   background: linear-gradient(to top, black, transparent);
 }
 
+.action-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* ================= INPUT ================= */
 .input-box {
-  grid-column: 1 / -1;
+  width: 100%;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -312,6 +319,7 @@ button {
 .gift-btn,
 .amen-btn,
 .menu-btn {
+  flex: 0 0 auto;
   width: 42px;
   height: 42px;
   border-radius: 50%;
@@ -331,6 +339,7 @@ button {
 }
 
 .share-btn {
+  flex: 0 0 auto;
   height: 42px;
   padding: 0 12px;
   border-radius: 999px;
@@ -698,8 +707,12 @@ button {
 
 @media (max-width: 430px) {
   .bottom-bar {
-    gap: 6px;
+    gap: 8px;
     padding-inline: 8px;
+  }
+
+  .action-row {
+    gap: 6px;
   }
 
   .gift-btn,

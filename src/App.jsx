@@ -677,10 +677,12 @@ function LiveViewer() {
           <button className="send-btn" onClick={sendMessage}>Send</button>
         </div>
 
-        <button className="gift-btn" onClick={() => setShowGift(true)}>🎁</button>
-        <button className="amen-btn" onClick={sendAmen}>Amen</button>
-        <button className="share-btn" type="button" onClick={shareStream}>Share</button>
-        <button className="menu-btn" type="button" onClick={() => setShowMenuSheet(true)}>☰</button>
+        <div className="action-row">
+          <button className="gift-btn" onClick={() => setShowGift(true)}>🎁</button>
+          <button className="amen-btn" onClick={sendAmen}>Amen</button>
+          <button className="share-btn" type="button" onClick={shareStream}>Share</button>
+          <button className="menu-btn" type="button" onClick={() => setShowMenuSheet(true)}>☰</button>
+        </div>
       </div>
 
       <div className={`gift-modal ${showGift ? "active" : ""}`}>
