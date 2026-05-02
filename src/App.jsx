@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Routes, Route, useNavigate, useParams } from "react-router-dom";
 import "./App.css";
 
@@ -28,6 +28,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
+const NSPPD_CHANNEL_ID = "UCLg4NCAJxhIvD4IRV__LOFg";
 const PAYSTACK_KEY =
   import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ||
   import.meta.env.VITE_PAYSTACK_KEY ||
@@ -38,6 +39,14 @@ const BACKEND_URL = (
   "https://glive-backend.onrender.com"
 ).replace(/\/$/, "");
 const PAYSTACK_SCRIPT_SRC = "https://js.paystack.co/v1/inline.js";
+
+const streams = [
+  {
+    id: 0,
+    title: "NSPPD",
+    channelId: NSPPD_CHANNEL_ID
+  }
+];
 
 function loadPaystackScript() {
   if (window.PaystackPop) {
@@ -153,29 +162,75 @@ function getPlaylistEmbedUrl(playlistId) {
   return `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&playsinline=1`;
 }
 
-/* STREAMS */
-const streams = [
-  {
-    id: 0,
-    title: "NSPPD",
-    channelId: "UCLg4NCAJxhIvD4IRV__LOFg"
-  }
-];
+function getVideoEmbedUrl(videoId) {
+  return `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1`;
+}
 
-/* WATCH PAGE */
+function getThumb(video, preferred = "high") {
+  return (
+    video?.snippet?.thumbnails?.[preferred]?.url ||
+    video?.snippet?.thumbnails?.medium?.url ||
+    video?.snippet?.thumbnails?.default?.url ||
+    ""
+  );
+}
+
+function getVideoId(video) {
+  return video?.id?.videoId;
+}
+
+function Header() {
+  return (
+    <header className="app-header">
+      <div className="brand-title">StreamofJoy TV</div>
+      <button className="icon-button search-button" type="button" aria-label="Search">
+        <span />
+      </button>
+    </header>
+  );
+}
+
+function BottomSheet({ open, children, className = "" }) {
+  return (
+    <div className={`bottom-sheet ${className} ${open ? "active" : ""}`}>
+      <div className="sheet-handle" />
+      {children}
+    </div>
+  );
+}
+
+function WatchFooter({ onLogout, onAlarm }) {
+  return (
+    <footer className="watch-footer">
+      <button type="button" onClick={onLogout}>Logout</button>
+      <button type="button" onClick={onAlarm}>Set Prayer Alarm</button>
+    </footer>
+  );
+}
+
 function WatchPage() {
   const navigate = useNavigate();
   const auth = getAuth();
   const [videos, setVideos] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
+  const [activeHero, setActiveHero] = useState(0);
+  const [showAlarmSheet, setShowAlarmSheet] = useState(false);
+  const [alarmPreference, setAlarmPreference] = useState("");
+
+  const heroVideos = useMemo(() => videos.slice(0, Math.min(videos.length, 5)), [videos]);
+  const recentVideos = useMemo(() => videos, [videos]);
 
   const handleLogout = async () => {
     await signOut(auth);
   };
 
+  const openVideo = (video) => {
+    const videoId = getVideoId(video);
+    if (videoId) navigate(`/live/${videoId}`);
+  };
+
   useEffect(() => {
     let active = true;
-    const nsppd = streams[0];
 
     const fetchNsppdVideos = async () => {
       setLoadingVideos(true);
@@ -191,10 +246,10 @@ function WatchPage() {
       try {
         const [liveItems, latestItems] = await Promise.all([
           fetchYouTubeSearch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${nsppd.channelId}&eventType=live&order=date&maxResults=1&type=video&key=${API_KEY}`
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${NSPPD_CHANNEL_ID}&eventType=live&order=date&maxResults=1&type=video&key=${API_KEY}`
           ),
           fetchYouTubeSearch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${nsppd.channelId}&order=date&maxResults=10&type=video&key=${API_KEY}`
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${NSPPD_CHANNEL_ID}&order=date&maxResults=10&type=video&key=${API_KEY}`
           )
         ]);
 
@@ -206,6 +261,7 @@ function WatchPage() {
 
         if (!active) return;
         setVideos(mergedVideos);
+        setActiveHero(0);
       } catch (error) {
         console.error("Unable to fetch NSPPD videos:", error);
         if (active) setVideos([]);
@@ -225,47 +281,102 @@ function WatchPage() {
 
   return (
     <div className="watch-page">
-      <div className="watch-header">
-        <h1>Streamsofjoy TV</h1>
-      </div>
+      <Header />
 
-      <div className="video-list">
+      <main className="watch-content">
         {loadingVideos && <div className="empty-state">Loading NSPPD videos...</div>}
 
         {!loadingVideos && videos.length === 0 && (
           <div className="empty-state">No NSPPD videos available right now.</div>
         )}
 
-        {videos.map((video) => (
-          <div
-            key={video.id.videoId}
-            className="video-list-item"
-            onClick={() => navigate(`/live/${video.id.videoId}`)}
-          >
-            <div className="video-thumb-wrap">
-              {video.isLive && <div className="live-badge">LIVE</div>}
-              <img
-                src={video.snippet?.thumbnails?.medium?.url || video.snippet?.thumbnails?.default?.url}
-                alt=""
-              />
+        {heroVideos.length > 0 && (
+          <section className="hero-section" aria-label="Highlights">
+            <div
+              className="hero-carousel"
+              onScroll={(event) => {
+                const width = event.currentTarget.clientWidth || 1;
+                setActiveHero(Math.round(event.currentTarget.scrollLeft / width));
+              }}
+            >
+              {heroVideos.map((video) => (
+                <button
+                  type="button"
+                  className="hero-card"
+                  key={getVideoId(video)}
+                  onClick={() => openVideo(video)}
+                >
+                  <img src={getThumb(video)} alt="" />
+                  <span className="hero-shade" />
+                  {video.isLive && <span className="live-badge">LIVE</span>}
+                  <span className="hero-title">{video.snippet?.title}</span>
+                </button>
+              ))}
             </div>
-            <div className="video-list-title">{video.snippet?.title}</div>
-          </div>
-        ))}
-      </div>
 
-      <div className="watch-footer">
-        <button type="button" onClick={handleLogout}>Logout</button>
-      </div>
+            <div className="carousel-dots" aria-hidden="true">
+              {heroVideos.map((video, index) => (
+                <span
+                  key={`${getVideoId(video)}-dot`}
+                  className={index === activeHero ? "active" : ""}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {videos.length > 0 && (
+          <section className="recent-section">
+            <h2>Recently Added</h2>
+            <div className="recent-scroll">
+              {recentVideos.map((video) => (
+                <button
+                  type="button"
+                  key={getVideoId(video)}
+                  className="recent-card"
+                  onClick={() => openVideo(video)}
+                >
+                  <span className="recent-thumb">
+                    <img src={getThumb(video, "medium")} alt="" />
+                    {video.isLive && <span className="live-badge">LIVE</span>}
+                  </span>
+                  <span className="recent-title">{video.snippet?.title}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+      </main>
+
+      <WatchFooter onLogout={handleLogout} onAlarm={() => setShowAlarmSheet(true)} />
+
+      <BottomSheet open={showAlarmSheet} className="alarm-sheet">
+        <h3>Set Prayer Alarm</h3>
+        <div className="sheet-options">
+          {["Call", "SMS", "Notification"].map((option) => (
+            <button
+              type="button"
+              key={option}
+              className={alarmPreference === option ? "selected" : ""}
+              onClick={() => setAlarmPreference(option)}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+        <button className="close-btn" type="button" onClick={() => setShowAlarmSheet(false)}>
+          Done
+        </button>
+      </BottomSheet>
     </div>
   );
 }
 
-/* LIVE VIEW */
 function LiveViewer() {
-  const { id } = useParams();
-  const matchedStream = streams.find(s => String(s.id) === id);
-  const routeVideoId = matchedStream ? null : id;
+  const params = useParams();
+  const routeParam = params.videoId || params.id;
+  const matchedStream = streams.find((s) => String(s.id) === routeParam);
+  const routeVideoId = matchedStream ? null : routeParam;
   const stream = matchedStream || streams[0];
 
   const [videoId, setVideoId] = useState(null);
@@ -283,7 +394,7 @@ function LiveViewer() {
   const [viewers, setViewers] = useState(10000);
   const [isRecharging, setIsRecharging] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [showMenuSheet, setShowMenuSheet] = useState(false);
+  const [showLogoutSheet, setShowLogoutSheet] = useState(false);
   const [showPrayerForm, setShowPrayerForm] = useState(false);
   const [showTestimoniesPanel, setShowTestimoniesPanel] = useState(false);
   const [showTestimonyForm, setShowTestimonyForm] = useState(false);
@@ -295,13 +406,11 @@ function LiveViewer() {
   const commentRef = useRef(null);
   const [sessionStart] = useState(Date.now());
 
-  /* AUTH */
   useEffect(() => {
     const auth = getAuth();
     return onAuthStateChanged(auth, (u) => setUser(u));
   }, []);
 
-  /* WALLET */
   useEffect(() => {
     if (!user) return;
     const ref = doc(db, "users", user.uid);
@@ -311,7 +420,6 @@ function LiveViewer() {
     });
   }, [user]);
 
-  /* GOOGLE LOGIN */
   const handleGoogleLogin = async () => {
     try {
       const auth = getAuth();
@@ -415,13 +523,13 @@ function LiveViewer() {
     const id = Date.now();
     const colors = ["#f9d66d", "#ffffff", "#9ff3c8"];
 
-    setAmens(prev => [...prev, {
+    setAmens((prev) => [...prev, {
       id,
       color: colors[Math.floor(Math.random() * colors.length)]
     }]);
 
     setTimeout(() => {
-      setAmens(prev => prev.filter(a => a.id !== id));
+      setAmens((prev) => prev.filter((amen) => amen.id !== id));
     }, 2500);
   };
 
@@ -446,6 +554,12 @@ function LiveViewer() {
     }
   };
 
+  const handleLogout = async () => {
+    const auth = getAuth();
+    await signOut(auth);
+    setShowLogoutSheet(false);
+  };
+
   const submitPrayer = async (event) => {
     event.preventDefault();
     requireLogin(async () => {
@@ -460,7 +574,7 @@ function LiveViewer() {
       setPrayerName("");
       setPrayerText("");
       setShowPrayerForm(false);
-      setShowMenuSheet(false);
+      setShowLogoutSheet(false);
     });
   };
 
@@ -478,14 +592,14 @@ function LiveViewer() {
       setTestimonyName("");
       setTestimonyText("");
       setShowTestimonyForm(false);
-      setShowMenuSheet(false);
+      setShowLogoutSheet(false);
       setShowTestimoniesPanel(false);
     });
   };
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setViewers(v => v + Math.floor(Math.random() * 5));
+      setViewers((v) => v + Math.floor(Math.random() * 5));
     }, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -493,9 +607,9 @@ function LiveViewer() {
   useEffect(() => {
     const q = query(collection(db, "comments"), orderBy("createdAt"), limit(50));
     return onSnapshot(q, (snap) => {
-      const filtered = snap.docs.map(d => d.data()).filter(c => {
-        if (!c.createdAt) return false;
-        return c.createdAt.toMillis() >= sessionStart;
+      const filtered = snap.docs.map((d) => d.data()).filter((comment) => {
+        if (!comment.createdAt) return false;
+        return comment.createdAt.toMillis() >= sessionStart;
       });
       setComments(filtered);
     });
@@ -522,7 +636,7 @@ function LiveViewer() {
 
       if (routeVideoId) {
         setVideoId(routeVideoId);
-        setVideoSrc(`https://www.youtube.com/embed/${routeVideoId}?autoplay=1&playsinline=1`);
+        setVideoSrc(getVideoEmbedUrl(routeVideoId));
         setLoadingVideo(false);
         return;
       }
@@ -549,7 +663,7 @@ function LiveViewer() {
         if (liveItems.length > 0) {
           const nextVideoId = liveItems[0].id.videoId;
           setVideoId(nextVideoId);
-          setVideoSrc(`https://www.youtube.com/embed/${nextVideoId}?autoplay=1&playsinline=1`);
+          setVideoSrc(getVideoEmbedUrl(nextVideoId));
           setLoadingVideo(false);
           return;
         }
@@ -561,7 +675,7 @@ function LiveViewer() {
         if (completedLiveItems.length > 0) {
           const nextVideoId = completedLiveItems[0].id.videoId;
           setVideoId(nextVideoId);
-          setVideoSrc(`https://www.youtube.com/embed/${nextVideoId}?autoplay=1&playsinline=1`);
+          setVideoSrc(getVideoEmbedUrl(nextVideoId));
           setLoadingVideo(false);
           return;
         }
@@ -574,7 +688,7 @@ function LiveViewer() {
         setVideoId(nextVideoId);
         setVideoSrc(
           nextVideoId
-            ? `https://www.youtube.com/embed/${nextVideoId}?autoplay=1&playsinline=1`
+            ? getVideoEmbedUrl(nextVideoId)
             : uploadsPlaylistId
               ? getPlaylistEmbedUrl(uploadsPlaylistId)
               : getLiveEmbedUrl(channelId)
@@ -596,14 +710,8 @@ function LiveViewer() {
         <div className="login-overlay">
           <div className="login-card">
             <h3>Login to continue</h3>
-
-            <button onClick={handleGoogleLogin}>
-              Continue with Google
-            </button>
-
-            <button onClick={() => setShowLogin(false)}>
-              Cancel
-            </button>
+            <button type="button" onClick={handleGoogleLogin}>Continue with Google</button>
+            <button type="button" onClick={() => setShowLogin(false)}>Cancel</button>
           </div>
         </div>
       )}
@@ -613,6 +721,7 @@ function LiveViewer() {
           <div className="no-video">Loading...</div>
         ) : videoSrc ? (
           <iframe
+            title={videoId ? `NSPPD video ${videoId}` : "NSPPD live stream"}
             src={videoSrc}
             allow="autoplay; fullscreen"
             allowFullScreen
@@ -623,21 +732,22 @@ function LiveViewer() {
       </div>
 
       <div className="top-right">
-        👁 {viewers.toLocaleString()}
+        <span className="viewer-eye" aria-hidden="true" />
+        {viewers.toLocaleString()}
       </div>
 
       <div className="comment-overlay" ref={commentRef}>
-        {comments.map((c, i) => (
-          <div key={i} className="comment">
-            <strong>{c.username}</strong> {c.text}
+        {comments.map((comment, index) => (
+          <div key={index} className="comment">
+            <strong>{comment.username}</strong> {comment.text}
           </div>
         ))}
       </div>
 
       <div className="amen-container">
-        {amens.map(a => (
-          <span key={a.id} className="amen" style={{ color: a.color }}>
-            Amen
+        {amens.map((amen) => (
+          <span key={amen.id} className="amen" style={{ color: amen.color }}>
+            <span aria-hidden="true">{"\uD83D\uDE4F"}</span>
           </span>
         ))}
       </div>
@@ -672,21 +782,29 @@ function LiveViewer() {
           <input
             placeholder="Comment..."
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(event) => setInput(event.target.value)}
           />
-          <button className="send-btn" onClick={sendMessage}>Send</button>
+          <button className="send-btn" type="button" onClick={sendMessage}>Send</button>
         </div>
 
         <div className="action-row">
-          <button className="gift-btn" onClick={() => setShowGift(true)}>🎁</button>
-          <button className="amen-btn" onClick={sendAmen}>Amen</button>
+          <button className="gift-btn" type="button" onClick={() => setShowGift(true)} aria-label="Send gift">
+            {"\uD83C\uDF81"}
+          </button>
+          <button className="amen-btn" type="button" onClick={sendAmen}>
+            <span aria-hidden="true">{"\uD83D\uDE4F"}</span>
+            Amen
+          </button>
           <button className="share-btn" type="button" onClick={shareStream}>Share</button>
-          <button className="menu-btn" type="button" onClick={() => setShowMenuSheet(true)}>☰</button>
+          <button className="hamburger-btn" type="button" onClick={() => setShowLogoutSheet(true)} aria-label="Menu">
+            <span />
+            <span />
+            <span />
+          </button>
         </div>
       </div>
 
-      <div className={`gift-modal ${showGift ? "active" : ""}`}>
-        <div className="sheet-handle" />
+      <BottomSheet open={showGift} className="gift-modal">
         <div className="gift-balance">
           <span>Balance: {coins}</span>
           <button type="button" onClick={recharge} disabled={isRecharging}>
@@ -694,26 +812,25 @@ function LiveViewer() {
           </button>
         </div>
         <div className="gift-grid">
-          <div onClick={() => sendGift(5, "🎁")}>🎁 5</div>
-          <div onClick={() => sendGift(20, "💎")}>💎 20</div>
-          <div onClick={() => sendGift(50, "🏆")}>🏆 50</div>
+          <button type="button" onClick={() => sendGift(5, "\uD83C\uDF81")}>{"\uD83C\uDF81"} 5</button>
+          <button type="button" onClick={() => sendGift(20, "\uD83D\uDC8E")}>{"\uD83D\uDC8E"} 20</button>
+          <button type="button" onClick={() => sendGift(50, "\uD83C\uDFC6")}>{"\uD83C\uDFC6"} 50</button>
         </div>
-        <button className="close-btn" onClick={() => setShowGift(false)}>Close</button>
-      </div>
+        <button className="close-btn" type="button" onClick={() => setShowGift(false)}>Close</button>
+      </BottomSheet>
 
-      <div className={`bottom-sheet ${showMenuSheet ? "active" : ""}`}>
-        <div className="sheet-handle" />
-        <div className="sheet-options">
-          <button type="button" onClick={() => setShowPrayerForm(true)}>Prayer Request</button>
-          <button type="button" onClick={() => setShowTestimoniesPanel(true)}>Testimonies</button>
+      <BottomSheet open={showLogoutSheet} className="menu-sheet">
+        <div className="logout-sheet-content">
+          <button className="logout-action" type="button" onClick={handleLogout}>
+            Logout
+          </button>
         </div>
-        <button className="close-btn" type="button" onClick={() => setShowMenuSheet(false)}>
+        <button className="close-btn" type="button" onClick={() => setShowLogoutSheet(false)}>
           Close
         </button>
-      </div>
+      </BottomSheet>
 
-      <div className={`bottom-sheet testimonies-panel ${showTestimoniesPanel ? "active" : ""}`}>
-        <div className="sheet-handle" />
+      <BottomSheet open={showTestimoniesPanel} className="testimonies-panel">
         <h3>Testimonies</h3>
         <div className="testimony-sheet-list">
           {testimonies.length === 0 ? (
@@ -735,7 +852,7 @@ function LiveViewer() {
         <button className="close-btn" type="button" onClick={() => setShowTestimoniesPanel(false)}>
           Close
         </button>
-      </div>
+      </BottomSheet>
 
       {showPrayerForm && (
         <div className="form-sheet">
@@ -780,12 +897,12 @@ function LiveViewer() {
   );
 }
 
-/* ROUTES */
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<WatchPage />} />
-      <Route path="/live/:id" element={<LiveViewer />} />
+      <Route path="/live/:videoId" element={<LiveViewer />} />
+      <Route path="/live/stream/:id" element={<LiveViewer />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
     </Routes>
