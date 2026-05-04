@@ -196,6 +196,36 @@ function getVideoEmbedUrl(videoId) {
   return `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1`;
 }
 
+function getFullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function requestElementFullscreen(element) {
+  if (element.requestFullscreen) return element.requestFullscreen();
+  if (element.webkitRequestFullscreen) return element.webkitRequestFullscreen();
+  return Promise.reject(new Error("Fullscreen is not supported."));
+}
+
+async function lockLandscapeOrientation() {
+  try {
+    if (screen.orientation?.lock) {
+      await screen.orientation.lock("landscape");
+    }
+  } catch {
+    // Browsers can reject orientation lock unless fullscreen was started by a tap.
+  }
+}
+
+function unlockOrientation() {
+  try {
+    if (screen.orientation?.unlock) {
+      screen.orientation.unlock();
+    }
+  } catch {
+    // Ignore unsupported orientation APIs.
+  }
+}
+
 function getThumb(video, preferred = "high") {
   return (
     video?.snippet?.thumbnails?.[preferred]?.url ||
@@ -462,6 +492,7 @@ function LiveViewer() {
   const [testimonyText, setTestimonyText] = useState("");
 
   const commentRef = useRef(null);
+  const videoFrameRef = useRef(null);
   const [sessionStart] = useState(Date.now());
 
   useEffect(() => {
@@ -762,6 +793,36 @@ function LiveViewer() {
     fetchVideo();
   }, [routeVideoId, stream]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (getFullscreenElement()) {
+        lockLandscapeOrientation();
+      } else {
+        unlockOrientation();
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      unlockOrientation();
+    };
+  }, []);
+
+  const expandVideo = async () => {
+    if (!videoFrameRef.current) return;
+
+    try {
+      await requestElementFullscreen(videoFrameRef.current);
+      await lockLandscapeOrientation();
+    } catch (error) {
+      console.error("Unable to expand video:", error);
+    }
+  };
+
   return (
     <div className="live-stream-page">
       {showLogin && (
@@ -774,18 +835,23 @@ function LiveViewer() {
         </div>
       )}
 
-      <div className="video-container">
+      <div className="video-container" ref={videoFrameRef}>
         {loadingVideo ? (
           <div className="no-video">Loading...</div>
         ) : videoSrc ? (
           <iframe
             title={videoId ? `${stream.title} video ${videoId}` : `${stream.title} live stream`}
             src={videoSrc}
-            allow="autoplay; fullscreen"
+            allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
           />
         ) : (
           <div className="no-video">Live not available</div>
+        )}
+        {videoSrc && (
+          <button className="video-expand-btn" type="button" onClick={expandVideo} aria-label="Expand video">
+            <span />
+          </button>
         )}
       </div>
 
