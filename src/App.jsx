@@ -42,9 +42,39 @@ const PAYSTACK_SCRIPT_SRC = "https://js.paystack.co/v1/inline.js";
 
 const streams = [
   {
-    id: 0,
+    id: "nsppd",
     title: "NSPPD",
     channelId: NSPPD_CHANNEL_ID
+  },
+  {
+    id: "winners",
+    title: "Winners Chapel",
+    channelId: "UCyUKtrMdDilf74SPkCCKKtw"
+  },
+  {
+    id: "rccg",
+    title: "RCCG",
+    channelId: "UCHp4qCAPmz7-5BJ601FDFnA"
+  },
+  {
+    id: "dunamis",
+    title: "Dunamis",
+    channelId: "UC0pFEFO86OwhVUcqAQ4ICjQ"
+  },
+  {
+    id: "koinonia",
+    title: "Koinonia Global",
+    channelId: "UCq2ueL6wl7slTuInRbFpe7w"
+  },
+  {
+    id: "omega-fire",
+    title: "Omega Fire Ministry",
+    channelId: "UCrF3Zv8PGIT4R4f2LMQvQSQ"
+  },
+  {
+    id: "light-nation",
+    title: "Light Nation Church",
+    channelId: "UCgXEDFzk3TwStyRnlUJrMVA"
   }
 ];
 
@@ -325,6 +355,23 @@ function WatchPage() {
           </section>
         )}
 
+        <section className="church-section">
+          <h2>Live Churches</h2>
+          <div className="church-scroll">
+            {streams.map((stream) => (
+              <button
+                type="button"
+                key={stream.id}
+                className="church-card"
+                onClick={() => navigate(`/live/stream/${stream.id}`)}
+              >
+                <span className="church-live-dot" aria-hidden="true" />
+                <span>{stream.title}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
         {videos.length > 0 && (
           <section className="recent-section">
             <h2>Recently Added</h2>
@@ -535,8 +582,8 @@ function LiveViewer() {
 
   const shareStream = async () => {
     const shareData = {
-      title: "NSPPD on GLive",
-      text: "Join this NSPPD stream.",
+      title: `${stream.title} on GLive`,
+      text: `Join this ${stream.title} stream.`,
       url: window.location.href
     };
 
@@ -721,7 +768,7 @@ function LiveViewer() {
           <div className="no-video">Loading...</div>
         ) : videoSrc ? (
           <iframe
-            title={videoId ? `NSPPD video ${videoId}` : "NSPPD live stream"}
+            title={videoId ? `${stream.title} video ${videoId}` : `${stream.title} live stream`}
             src={videoSrc}
             allow="autoplay; fullscreen"
             allowFullScreen

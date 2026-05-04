@@ -127,6 +127,7 @@ button {
 }
 
 .hero-carousel::-webkit-scrollbar,
+.church-scroll::-webkit-scrollbar,
 .recent-scroll::-webkit-scrollbar {
   display: none;
 }
@@ -198,14 +199,32 @@ button {
   gap: 12px;
 }
 
+.church-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.church-section h2,
 .recent-section h2 {
   padding: 0 16px;
   font-size: 18px;
   line-height: 1;
 }
 
-.recent-scroll {
+.church-scroll {
   display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 0 16px 4px;
+  scrollbar-width: none;
+}
+
+.recent-scroll {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, auto);
+  grid-auto-columns: 155px;
   gap: 12px;
   overflow-x: auto;
   padding: 0 16px 4px;
@@ -213,11 +232,34 @@ button {
 }
 
 .recent-card {
-  flex: 0 0 155px;
   border: none;
   background: transparent;
   color: #fff;
   text-align: left;
+}
+
+.church-card {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 0 14px;
+  background: #141414;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.church-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #e50914;
+  box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.22);
 }
 
 .recent-thumb {
@@ -903,7 +945,11 @@ button {
   }
 
   .recent-card {
-    flex-basis: 190px;
+    width: 100%;
+  }
+
+  .recent-scroll {
+    grid-auto-columns: 190px;
   }
 
   .video-container {
