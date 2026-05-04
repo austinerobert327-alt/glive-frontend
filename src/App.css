@@ -173,6 +173,20 @@ button {
   overflow: hidden;
 }
 
+.video-source {
+  position: absolute;
+  left: 14px;
+  bottom: 58px;
+  max-width: calc(100% - 28px);
+  overflow: hidden;
+  color: #d9d9d9;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .carousel-dots {
   display: flex;
   justify-content: center;
@@ -282,6 +296,22 @@ button {
   color: #f2f2f2;
   font-size: 13px;
   line-height: 1.3;
+}
+
+.recent-source {
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
+  color: #aaa;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-source + .recent-title {
+  margin-top: 4px;
 }
 
 .watch-footer {

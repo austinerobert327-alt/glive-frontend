@@ -209,6 +209,15 @@ function getVideoId(video) {
   return video?.id?.videoId;
 }
 
+function addStreamToVideo(video, stream, isLive = false) {
+  return {
+    ...video,
+    isLive,
+    streamId: stream.id,
+    streamTitle: stream.title
+  };
+}
+
 function Header() {
   return (
     <header className="app-header">
@@ -229,11 +238,10 @@ function BottomSheet({ open, children, className = "" }) {
   );
 }
 
-function WatchFooter({ onLogout, onAlarm }) {
+function WatchFooter({ onLogout }) {
   return (
     <footer className="watch-footer">
       <button type="button" onClick={onLogout}>Logout</button>
-      <button type="button" onClick={onAlarm}>Set Prayer Alarm</button>
     </footer>
   );
 }
@@ -244,8 +252,6 @@ function WatchPage() {
   const [videos, setVideos] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
   const [activeHero, setActiveHero] = useState(0);
-  const [showAlarmSheet, setShowAlarmSheet] = useState(false);
-  const [alarmPreference, setAlarmPreference] = useState("");
 
   const heroVideos = useMemo(() => videos.slice(0, Math.min(videos.length, 5)), [videos]);
   const recentVideos = useMemo(() => videos, [videos]);
@@ -262,7 +268,7 @@ function WatchPage() {
   useEffect(() => {
     let active = true;
 
-    const fetchNsppdVideos = async () => {
+    const fetchWatchVideos = async () => {
       setLoadingVideos(true);
 
       if (!API_KEY) {
@@ -274,34 +280,56 @@ function WatchPage() {
       }
 
       try {
-        const [liveItems, latestItems] = await Promise.all([
-          fetchYouTubeSearch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${NSPPD_CHANNEL_ID}&eventType=live&order=date&maxResults=1&type=video&key=${API_KEY}`
-          ),
-          fetchYouTubeSearch(
-            `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${NSPPD_CHANNEL_ID}&order=date&maxResults=10&type=video&key=${API_KEY}`
-          )
-        ]);
+        const streamVideoGroups = await Promise.all(
+          streams.map(async (stream) => {
+            const [liveItems, latestItems] = await Promise.all([
+              fetchYouTubeSearch(
+                `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${stream.channelId}&eventType=live&order=date&maxResults=1&type=video&key=${API_KEY}`
+              ),
+              fetchYouTubeSearch(
+                `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${stream.channelId}&order=date&maxResults=3&type=video&key=${API_KEY}`
+              )
+            ]);
 
-        const liveVideoId = liveItems[0]?.id?.videoId || null;
-        const mergedVideos = [
-          ...liveItems.map((item) => ({ ...item, isLive: true })),
-          ...latestItems.filter((item) => item.id?.videoId !== liveVideoId)
-        ].slice(0, 10);
+            const liveVideoId = liveItems[0]?.id?.videoId || null;
+            return [
+              ...liveItems.map((item) => addStreamToVideo(item, stream, true)),
+              ...latestItems
+                .filter((item) => item.id?.videoId !== liveVideoId)
+                .map((item) => addStreamToVideo(item, stream))
+            ];
+          })
+        );
+
+        const uniqueVideos = new Map();
+        streamVideoGroups.flat().forEach((video) => {
+          const videoId = getVideoId(video);
+          if (videoId && !uniqueVideos.has(videoId)) {
+            uniqueVideos.set(videoId, video);
+          }
+        });
+
+        const mergedVideos = Array.from(uniqueVideos.values())
+          .sort((a, b) => {
+            const aDate = new Date(a.snippet?.publishedAt || 0).getTime();
+            const bDate = new Date(b.snippet?.publishedAt || 0).getTime();
+            return bDate - aDate;
+          })
+          .slice(0, 18);
 
         if (!active) return;
         setVideos(mergedVideos);
         setActiveHero(0);
       } catch (error) {
-        console.error("Unable to fetch NSPPD videos:", error);
+        console.error("Unable to fetch watch videos:", error);
         if (active) setVideos([]);
       } finally {
         if (active) setLoadingVideos(false);
       }
     };
 
-    fetchNsppdVideos();
-    const interval = window.setInterval(fetchNsppdVideos, 60000);
+    fetchWatchVideos();
+    const interval = window.setInterval(fetchWatchVideos, 300000);
 
     return () => {
       active = false;
@@ -314,10 +342,10 @@ function WatchPage() {
       <Header />
 
       <main className="watch-content">
-        {loadingVideos && <div className="empty-state">Loading NSPPD videos...</div>}
+        {loadingVideos && <div className="empty-state">Loading church videos...</div>}
 
         {!loadingVideos && videos.length === 0 && (
-          <div className="empty-state">No NSPPD videos available right now.</div>
+          <div className="empty-state">No church videos available right now.</div>
         )}
 
         {heroVideos.length > 0 && (
@@ -339,6 +367,7 @@ function WatchPage() {
                   <img src={getThumb(video)} alt="" />
                   <span className="hero-shade" />
                   {video.isLive && <span className="live-badge">LIVE</span>}
+                  {video.streamTitle && <span className="video-source">{video.streamTitle}</span>}
                   <span className="hero-title">{video.snippet?.title}</span>
                 </button>
               ))}
@@ -387,6 +416,7 @@ function WatchPage() {
                     <img src={getThumb(video, "medium")} alt="" />
                     {video.isLive && <span className="live-badge">LIVE</span>}
                   </span>
+                  {video.streamTitle && <span className="recent-source">{video.streamTitle}</span>}
                   <span className="recent-title">{video.snippet?.title}</span>
                 </button>
               ))}
@@ -395,26 +425,7 @@ function WatchPage() {
         )}
       </main>
 
-      <WatchFooter onLogout={handleLogout} onAlarm={() => setShowAlarmSheet(true)} />
-
-      <BottomSheet open={showAlarmSheet} className="alarm-sheet">
-        <h3>Set Prayer Alarm</h3>
-        <div className="sheet-options">
-          {["Call", "SMS", "Notification"].map((option) => (
-            <button
-              type="button"
-              key={option}
-              className={alarmPreference === option ? "selected" : ""}
-              onClick={() => setAlarmPreference(option)}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-        <button className="close-btn" type="button" onClick={() => setShowAlarmSheet(false)}>
-          Done
-        </button>
-      </BottomSheet>
+      <WatchFooter onLogout={handleLogout} />
     </div>
   );
 }
