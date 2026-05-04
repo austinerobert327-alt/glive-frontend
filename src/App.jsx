@@ -908,7 +908,9 @@ function LiveViewer() {
             value={input}
             onChange={(event) => setInput(event.target.value)}
           />
-          <button className="send-btn" type="button" onClick={sendMessage}>Send</button>
+          <button className="send-btn" type="button" onClick={sendMessage} aria-label="Send comment">
+            <span />
+          </button>
         </div>
 
         <div className="action-row">
