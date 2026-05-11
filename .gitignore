@@ -2,18 +2,21 @@
 logs
 *.log
 
+# Dependencies
 node_modules
+
+# Build folders
 dist
 dist-ssr
-*.local
 
-# 🔥 SECRETS (VERY IMPORTANT)
-server/serviceAccountKey.json
-server/serviceAccountKey.json.json
-server/.env
+# Local environment files
+*.local
 .env
 
-# Editor
+# Firebase secret file
+firebaseKey.json
+
+# Editor files
 .vscode/*
 .idea
 .DS_Store
