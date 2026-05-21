@@ -482,7 +482,7 @@ function LiveViewer() {
   const [viewers, setViewers] = useState(10000);
   const [isRecharging, setIsRecharging] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [showLogoutSheet, setShowLogoutSheet] = useState(false);
+  const [showShareSheet, setShowShareSheet] = useState(false);
   const [showPrayerForm, setShowPrayerForm] = useState(false);
   const [showTestimoniesPanel, setShowTestimoniesPanel] = useState(false);
   const [showTestimonyForm, setShowTestimonyForm] = useState(false);
@@ -643,10 +643,33 @@ function LiveViewer() {
     }
   };
 
+  const shareToWhatsApp = () => {
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(`Watch this stream: ${window.location.href}`)}`;
+    window.open(url, "_blank");
+    setShowShareSheet(false);
+  };
+
+  const shareToFacebook = () => {
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`;
+    window.open(url, "_blank");
+    setShowShareSheet(false);
+  };
+
+  const shareToTikTok = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      window.open("https://www.tiktok.com/", "_blank");
+      alert("Link copied to clipboard. Paste it into TikTok.");
+    } catch (error) {
+      console.error("Unable to copy link for TikTok:", error);
+      alert("Unable to copy link. Please try again.");
+    }
+    setShowShareSheet(false);
+  };
+
   const handleLogout = async () => {
     const auth = getAuth();
     await signOut(auth);
-    setShowLogoutSheet(false);
   };
 
   const submitPrayer = async (event) => {
@@ -663,7 +686,6 @@ function LiveViewer() {
       setPrayerName("");
       setPrayerText("");
       setShowPrayerForm(false);
-      setShowLogoutSheet(false);
     });
   };
 
@@ -681,7 +703,6 @@ function LiveViewer() {
       setTestimonyName("");
       setTestimonyText("");
       setShowTestimonyForm(false);
-      setShowLogoutSheet(false);
       setShowTestimoniesPanel(false);
     });
   };
@@ -921,11 +942,8 @@ function LiveViewer() {
             <span aria-hidden="true">{"\uD83D\uDE4F"}</span>
             Amen
           </button>
-          <button className="share-btn" type="button" onClick={shareStream}>Share</button>
-          <button className="hamburger-btn" type="button" onClick={() => setShowLogoutSheet(true)} aria-label="Menu">
-            <span />
-            <span />
-            <span />
+          <button className="share-icon-btn" type="button" onClick={() => setShowShareSheet(true)} aria-label="Share">
+            <span className="share-icon" />
           </button>
         </div>
       </div>
@@ -945,13 +963,22 @@ function LiveViewer() {
         <button className="close-btn" type="button" onClick={() => setShowGift(false)}>Close</button>
       </BottomSheet>
 
-      <BottomSheet open={showLogoutSheet} className="menu-sheet">
-        <div className="logout-sheet-content">
-          <button className="logout-action" type="button" onClick={handleLogout}>
-            Logout
+      <BottomSheet open={showShareSheet} className="share-sheet">
+        <div className="share-sheet-content">
+          <button className="share-option whatsapp-btn" type="button" onClick={shareToWhatsApp}>
+            <span>🟢</span>
+            WhatsApp
+          </button>
+          <button className="share-option facebook-btn" type="button" onClick={shareToFacebook}>
+            <span>📘</span>
+            Facebook
+          </button>
+          <button className="share-option tiktok-btn" type="button" onClick={shareToTikTok}>
+            <span>🎵</span>
+            TikTok
           </button>
         </div>
-        <button className="close-btn" type="button" onClick={() => setShowLogoutSheet(false)}>
+        <button className="close-btn" type="button" onClick={() => setShowShareSheet(false)}>
           Close
         </button>
       </BottomSheet>

@@ -561,8 +561,8 @@ button {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border: none;
   border-radius: 50%;
@@ -574,9 +574,49 @@ button {
   width: 0;
   height: 0;
   margin-left: 2px;
-  border-top: 6px solid transparent;
-  border-bottom: 6px solid transparent;
-  border-left: 9px solid #fff;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 10px solid #fff;
+}
+
+.share-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+}
+
+.share-icon {
+  position: relative;
+  width: 12px;
+  height: 12px;
+}
+
+.share-icon::before,
+.share-icon::after {
+  content: "";
+  position: absolute;
+  background: #fff;
+}
+
+.share-icon::before {
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 8px;
+  transform: translateX(-50%);
+}
+
+.share-icon::after {
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 2px;
+  transform: translate(0, -2px) rotate(45deg);
 }
 
 .action-row {
@@ -689,6 +729,48 @@ button {
 
 .bottom-sheet.active {
   bottom: 0;
+}
+
+.share-sheet .share-sheet-content {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.share-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 12px;
+  background: #222;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.share-option span {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.share-option.whatsapp-btn span {
+  background: #25d36633;
+}
+
+.share-option.facebook-btn span {
+  background: #1877f233;
+}
+
+.share-option.tiktok-btn span {
+  background: #ffffff18;
 }
 
 .sheet-handle {
