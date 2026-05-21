@@ -35,7 +35,7 @@ const PAYSTACK_KEY =
   "pk_live_019365ea37124e26f8baec964658b07837520356";
 const BACKEND_URL = (
   import.meta.env.VITE_BACKEND_URL ||
-  "https://glive-backend.onrender.com"
+  "https://glive-backend-1.onrender.com"
 ).replace(/\/$/, "");
 const PAYSTACK_SCRIPT_SRC = "https://js.paystack.co/v1/inline.js";
 
@@ -235,7 +235,8 @@ function getThumb(video, preferred = "high") {
 }
 
 function getVideoId(video) {
-  return video?.videoId || video?.id?.videoId;
+  // Prefer backend-provided `videoId`, fallback to legacy `id.videoId`.
+  return video?.videoId || video?.id?.videoId || null;
 }
 
 function Header() {
@@ -731,22 +732,33 @@ function LiveViewer() {
       }
 
       try {
-        const videos = await fetchBackendVideos("/live-streams");
+        const [liveVideos, recentVideos] = await Promise.all([
+          fetchBackendVideos("/live-streams"),
+          fetchBackendVideos("/sync-recent-streams")
+        ]);
+
+        const videos = [...liveVideos, ...recentVideos];
         const normalizedStreamKey = normalizeKey(stream.id || stream.title);
 
         const matchedVideo = videos.find((video) => {
-          const churchKey = normalizeKey(video.churchName);
+          const churchKey = normalizeKey(video.churchName || video.title || "");
+          const vId = getVideoId(video);
+
+          if (vId && (normalizeKey(vId) === normalizedStreamKey || normalizedStreamKey === normalizeKey(vId))) {
+            return true;
+          }
+
           return (
             churchKey === normalizedStreamKey ||
-            normalizedStreamKey === normalizeKey(video.videoId) ||
             churchKey.includes(normalizedStreamKey) ||
             normalizedStreamKey.includes(churchKey)
           );
         });
 
-        if (matchedVideo?.videoId) {
-          setVideoId(matchedVideo.videoId);
-          setVideoSrc(getVideoEmbedUrl(matchedVideo.videoId));
+        const chosenVideoId = getVideoId(matchedVideo);
+        if (chosenVideoId) {
+          setVideoId(chosenVideoId);
+          setVideoSrc(getVideoEmbedUrl(chosenVideoId));
         } else {
           setVideoSrc(getLiveEmbedUrl(stream.channelId));
         }
