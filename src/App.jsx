@@ -27,7 +27,6 @@ import {
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
-const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const NSPPD_CHANNEL_ID = "UCLg4NCAJxhIvD4IRV__LOFg";
 const PAYSTACK_KEY =
   import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ||
@@ -174,22 +173,21 @@ async function processRechargeVerification(reference, userId, fallbackRef, setIs
   }
 }
 
-async function fetchYouTubeSearch(url) {
-  const response = await fetch(url);
+async function fetchBackendVideos(path) {
+  const response = await fetch(`${BACKEND_URL}${path}`);
+  if (!response.ok) {
+    throw new Error(`Backend fetch failed: ${response.status} ${response.statusText}`);
+  }
   const data = await response.json();
-  return data.items || [];
+  return Array.isArray(data) ? data : [];
 }
 
-function getUploadsPlaylistId(channelId) {
-  return channelId?.startsWith("UC") ? `UU${channelId.slice(2)}` : null;
+function normalizeKey(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function getLiveEmbedUrl(channelId) {
   return `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&playsinline=1`;
-}
-
-function getPlaylistEmbedUrl(playlistId) {
-  return `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&playsinline=1`;
 }
 
 function getVideoEmbedUrl(videoId) {
@@ -228,6 +226,7 @@ function unlockOrientation() {
 
 function getThumb(video, preferred = "high") {
   return (
+    video?.thumbnail ||
     video?.snippet?.thumbnails?.[preferred]?.url ||
     video?.snippet?.thumbnails?.medium?.url ||
     video?.snippet?.thumbnails?.default?.url ||
@@ -236,16 +235,7 @@ function getThumb(video, preferred = "high") {
 }
 
 function getVideoId(video) {
-  return video?.id?.videoId;
-}
-
-function addStreamToVideo(video, stream, isLive = false) {
-  return {
-    ...video,
-    isLive,
-    streamId: stream.id,
-    streamTitle: stream.title
-  };
+  return video?.videoId || video?.id?.videoId;
 }
 
 function Header() {
@@ -301,38 +291,27 @@ function WatchPage() {
     const fetchWatchVideos = async () => {
       setLoadingVideos(true);
 
-      if (!API_KEY) {
-        if (active) {
-          setVideos([]);
-          setLoadingVideos(false);
-        }
-        return;
-      }
-
       try {
-        const streamVideoGroups = await Promise.all(
-          streams.map(async (stream) => {
-            const [liveItems, latestItems] = await Promise.all([
-              fetchYouTubeSearch(
-                `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${stream.channelId}&eventType=live&order=date&maxResults=1&type=video&key=${API_KEY}`
-              ),
-              fetchYouTubeSearch(
-                `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${stream.channelId}&order=date&maxResults=3&type=video&key=${API_KEY}`
-              )
-            ]);
+        const [liveVideos, recentVideos] = await Promise.all([
+          fetchBackendVideos("/live-streams"),
+          fetchBackendVideos("/sync-recent-streams")
+        ]);
 
-            const liveVideoId = liveItems[0]?.id?.videoId || null;
-            return [
-              ...liveItems.map((item) => addStreamToVideo(item, stream, true)),
-              ...latestItems
-                .filter((item) => item.id?.videoId !== liveVideoId)
-                .map((item) => addStreamToVideo(item, stream))
-            ];
-          })
-        );
+        const normalizedVideos = [
+          ...liveVideos.map((video) => ({
+            ...video,
+            isLive: true,
+            streamTitle: video.churchName
+          })),
+          ...recentVideos.map((video) => ({
+            ...video,
+            isLive: false,
+            streamTitle: video.churchName
+          }))
+        ];
 
         const uniqueVideos = new Map();
-        streamVideoGroups.flat().forEach((video) => {
+        normalizedVideos.forEach((video) => {
           const videoId = getVideoId(video);
           if (videoId && !uniqueVideos.has(videoId)) {
             uniqueVideos.set(videoId, video);
@@ -341,8 +320,8 @@ function WatchPage() {
 
         const mergedVideos = Array.from(uniqueVideos.values())
           .sort((a, b) => {
-            const aDate = new Date(a.snippet?.publishedAt || 0).getTime();
-            const bDate = new Date(b.snippet?.publishedAt || 0).getTime();
+            const aDate = new Date(a.publishedAt || 0).getTime();
+            const bDate = new Date(b.publishedAt || 0).getTime();
             return bDate - aDate;
           })
           .slice(0, 18);
@@ -398,7 +377,7 @@ function WatchPage() {
                   <span className="hero-shade" />
                   {video.isLive && <span className="live-badge">LIVE</span>}
                   {video.streamTitle && <span className="video-source">{video.streamTitle}</span>}
-                  <span className="hero-title">{video.snippet?.title}</span>
+                  <span className="hero-title">{video.title}</span>
                 </button>
               ))}
             </div>
@@ -447,7 +426,7 @@ function WatchPage() {
                     {video.isLive && <span className="live-badge">LIVE</span>}
                   </span>
                   {video.streamTitle && <span className="recent-source">{video.streamTitle}</span>}
-                  <span className="recent-title">{video.snippet?.title}</span>
+                  <span className="recent-title">{video.title}</span>
                 </button>
               ))}
             </div>
@@ -751,62 +730,30 @@ function LiveViewer() {
         return;
       }
 
-      const channelId = stream.channelId;
-      const uploadsPlaylistId = getUploadsPlaylistId(channelId);
-
-      if (!channelId) {
-        setLoadingVideo(false);
-        return;
-      }
-
-      if (!API_KEY) {
-        setVideoSrc(uploadsPlaylistId ? getPlaylistEmbedUrl(uploadsPlaylistId) : getLiveEmbedUrl(channelId));
-        setLoadingVideo(false);
-        return;
-      }
-
       try {
-        const liveItems = await fetchYouTubeSearch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&videoEmbeddable=true&videoSyndicated=true&maxResults=1&key=${API_KEY}`
-        );
+        const videos = await fetchBackendVideos("/live-streams");
+        const normalizedStreamKey = normalizeKey(stream.id || stream.title);
 
-        if (liveItems.length > 0) {
-          const nextVideoId = liveItems[0].id.videoId;
-          setVideoId(nextVideoId);
-          setVideoSrc(getVideoEmbedUrl(nextVideoId));
-          setLoadingVideo(false);
-          return;
+        const matchedVideo = videos.find((video) => {
+          const churchKey = normalizeKey(video.churchName);
+          return (
+            churchKey === normalizedStreamKey ||
+            normalizedStreamKey === normalizeKey(video.videoId) ||
+            churchKey.includes(normalizedStreamKey) ||
+            normalizedStreamKey.includes(churchKey)
+          );
+        });
+
+        if (matchedVideo?.videoId) {
+          setVideoId(matchedVideo.videoId);
+          setVideoSrc(getVideoEmbedUrl(matchedVideo.videoId));
+        } else {
+          setVideoSrc(getLiveEmbedUrl(stream.channelId));
         }
-
-        const completedLiveItems = await fetchYouTubeSearch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=completed&type=video&order=date&videoEmbeddable=true&videoSyndicated=true&maxResults=1&key=${API_KEY}`
-        );
-
-        if (completedLiveItems.length > 0) {
-          const nextVideoId = completedLiveItems[0].id.videoId;
-          setVideoId(nextVideoId);
-          setVideoSrc(getVideoEmbedUrl(nextVideoId));
-          setLoadingVideo(false);
-          return;
-        }
-
-        const latestVideoItems = await fetchYouTubeSearch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&type=video&videoEmbeddable=true&videoSyndicated=true&maxResults=1&key=${API_KEY}`
-        );
-
-        const nextVideoId = latestVideoItems[0]?.id?.videoId || null;
-        setVideoId(nextVideoId);
-        setVideoSrc(
-          nextVideoId
-            ? getVideoEmbedUrl(nextVideoId)
-            : uploadsPlaylistId
-              ? getPlaylistEmbedUrl(uploadsPlaylistId)
-              : getLiveEmbedUrl(channelId)
-        );
-        setLoadingVideo(false);
-      } catch {
-        setVideoId(null);
-        setVideoSrc(uploadsPlaylistId ? getPlaylistEmbedUrl(uploadsPlaylistId) : getLiveEmbedUrl(channelId));
+      } catch (error) {
+        console.error("Unable to fetch live video from backend:", error);
+        setVideoSrc(getLiveEmbedUrl(stream.channelId));
+      } finally {
         setLoadingVideo(false);
       }
     };
