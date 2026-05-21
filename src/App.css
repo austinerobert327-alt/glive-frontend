@@ -310,7 +310,7 @@ button {
   white-space: nowrap;
 }
 
-.recent-source + .recent-title {
+.recent-source+.recent-title {
   margin-top: 4px;
 }
 
@@ -517,9 +517,10 @@ button {
 
 /* ================= BOTTOM BAR ================= */
 .bottom-bar {
-  position: absolute;
+  position: fixed;
   left: 0;
-  bottom: 12px;
+  right: 0;
+  bottom: 0;
   z-index: 30;
   display: flex;
   align-items: center;
@@ -1032,6 +1033,7 @@ button {
 }
 
 @media (orientation: portrait) {
+
   .video-container:fullscreen iframe,
   .video-container:-webkit-full-screen iframe {
     position: absolute;
