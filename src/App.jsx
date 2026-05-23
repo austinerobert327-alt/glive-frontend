@@ -267,17 +267,22 @@ function WatchPage() {
           streamTitle: "NSPPD"
         }));
 
+        const sortedRecent = recentStreams
+          .filter((video) => getVideoId(video))
+          .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+
         const liveVideoIds = new Set(
           liveStreams.map((video) => getVideoId(video)).filter(Boolean)
         );
 
-        const mergedVideos = [
-          ...liveStreams,
-          ...recentStreams.filter((video) => {
-            const videoId = getVideoId(video);
-            return videoId && !liveVideoIds.has(videoId);
-          })
-        ];
+        const uniqueRecent = sortedRecent.filter((video) => {
+          const videoId = getVideoId(video);
+          return videoId && !liveVideoIds.has(videoId);
+        });
+
+        const mergedVideos = liveStreams.length > 0
+          ? [...liveStreams, ...uniqueRecent].slice(0, 11)
+          : uniqueRecent.slice(0, 10);
 
         if (!active) return;
         setVideos(mergedVideos);
