@@ -760,11 +760,23 @@ function LiveViewer() {
           setVideoId(chosenVideoId);
           setVideoSrc(getVideoEmbedUrl(chosenVideoId));
         } else {
-          setVideoSrc(getLiveEmbedUrl(stream.channelId));
+          const fallbackRecent = recentVideos.find((video) => {
+            const churchKey = normalizeKey(video.churchName || "");
+            return churchKey.includes(normalizedStreamKey);
+          });
+
+          const fallbackVideoId = getVideoId(fallbackRecent);
+
+          if (fallbackVideoId) {
+            setVideoId(fallbackVideoId);
+            setVideoSrc(getVideoEmbedUrl(fallbackVideoId));
+          } else {
+            setVideoSrc(null);
+          }
         }
       } catch (error) {
         console.error("Unable to fetch live video from backend:", error);
-        setVideoSrc(getLiveEmbedUrl(stream.channelId));
+        setVideoSrc(null);
       } finally {
         setLoadingVideo(false);
       }
