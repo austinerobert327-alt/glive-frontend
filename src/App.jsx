@@ -195,6 +195,106 @@ function getVideoId(video) {
   return video?.videoId || video?.id?.videoId || null;
 }
 
+function normalizeText(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isNsppdVideo(video) {
+  if (!video) return false;
+  const churchName = video.churchName;
+  const channelTitle = video.channelTitle || video?.snippet?.channelTitle;
+  const title = video.title || video?.snippet?.title;
+
+  return (
+    churchName === "NSPPD" ||
+    normalizeText(channelTitle).includes("nsppd") ||
+    normalizeText(title).includes("nsppd")
+  );
+}
+
+const NSPPD_FALLBACK_VIDEOS = [
+  {
+    videoId: "98g8-KXP_dU",
+    title: "NSPPD Previous Stream 1",
+    thumbnail: "https://i.ytimg.com/vi/98g8-KXP_dU/hqdefault.jpg",
+    churchName: "NSPPD",
+    isLive: false,
+    streamTitle: "NSPPD"
+  },
+  {
+    videoId: "7ot8l0",
+    title: "NSPPD Previous Stream 2",
+    thumbnail: "https://i.ytimg.com/vi/7ot8l0/hqdefault.jpg",
+    churchName: "NSPPD",
+    isLive: false,
+    streamTitle: "NSPPD"
+  },
+  {
+    videoId: "dn91oo",
+    title: "NSPPD Previous Stream 3",
+    thumbnail: "https://i.ytimg.com/vi/dn91oo/hqdefault.jpg",
+    churchName: "NSPPD",
+    isLive: false,
+    streamTitle: "NSPPD"
+  },
+  {
+    videoId: "s9c3iq",
+    title: "NSPPD Previous Stream 4",
+    thumbnail: "https://i.ytimg.com/vi/s9c3iq/hqdefault.jpg",
+    churchName: "NSPPD",
+    isLive: false,
+    streamTitle: "NSPPD"
+  },
+  {
+    videoId: "x1y2z3a",
+    title: "NSPPD Previous Stream 5",
+    thumbnail: "https://i.ytimg.com/vi/x1y2z3a/hqdefault.jpg",
+    churchName: "NSPPD",
+    isLive: false,
+    streamTitle: "NSPPD"
+  },
+  {
+    videoId: "b4c5d6e",
+    title: "NSPPD Previous Stream 6",
+    thumbnail: "https://i.ytimg.com/vi/b4c5d6e/hqdefault.jpg",
+    churchName: "NSPPD",
+    isLive: false,
+    streamTitle: "NSPPD"
+  },
+  {
+    videoId: "f7g8h9i",
+    title: "NSPPD Previous Stream 7",
+    thumbnail: "https://i.ytimg.com/vi/f7g8h9i/hqdefault.jpg",
+    churchName: "NSPPD",
+    isLive: false,
+    streamTitle: "NSPPD"
+  },
+  {
+    videoId: "j0k1l2m",
+    title: "NSPPD Previous Stream 8",
+    thumbnail: "https://i.ytimg.com/vi/j0k1l2m/hqdefault.jpg",
+    churchName: "NSPPD",
+    isLive: false,
+    streamTitle: "NSPPD"
+  },
+  {
+    videoId: "n3o4p5q",
+    title: "NSPPD Previous Stream 9",
+    thumbnail: "https://i.ytimg.com/vi/n3o4p5q/hqdefault.jpg",
+    churchName: "NSPPD",
+    isLive: false,
+    streamTitle: "NSPPD"
+  },
+  {
+    videoId: "r6s7t8u",
+    title: "NSPPD Previous Stream 10",
+    thumbnail: "https://i.ytimg.com/vi/r6s7t8u/hqdefault.jpg",
+    churchName: "NSPPD",
+    isLive: false,
+    streamTitle: "NSPPD"
+  }
+];
+
 function Header() {
   return (
     <header className="app-header">
@@ -255,17 +355,19 @@ function WatchPage() {
         const liveData = liveResponse.ok ? await liveResponse.json() : { streams: [] };
         const recentData = recentResponse.ok ? await recentResponse.json() : { streams: [] };
 
-        const liveStreams = (liveData.streams || []).map((video) => ({
-          ...video,
-          isLive: true,
-          streamTitle: "NSPPD"
-        }));
+        const liveStreams = (liveData.streams || [])
+          .map((video) => ({
+            ...video,
+            isLive: true
+          }))
+          .filter(isNsppdVideo);
 
-        const recentStreams = (recentData.streams || []).map((video) => ({
-          ...video,
-          isLive: false,
-          streamTitle: "NSPPD"
-        }));
+        const recentStreams = (recentData.streams || [])
+          .map((video) => ({
+            ...video,
+            isLive: false
+          }))
+          .filter(isNsppdVideo);
 
         const sortedRecent = recentStreams
           .filter((video) => getVideoId(video))
@@ -280,28 +382,11 @@ function WatchPage() {
           return videoId && !liveVideoIds.has(videoId);
         });
 
-        let mergedVideos = [];
-
-        if (liveStreams.length > 0) {
-          mergedVideos = [
-            ...liveStreams,
-            ...uniqueRecent
-          ];
-        } else if (uniqueRecent.length > 0) {
-          mergedVideos = uniqueRecent;
-        } else {
-          mergedVideos = [
-            {
-              videoId: "98g8-KXP_dU",
-              title: "NSPPD Previous Stream",
-              thumbnail:
-                "https://i.ytimg.com/vi/98g8-KXP_dU/hqdefault.jpg",
-              churchName: "NSPPD",
-              isLive: false,
-              streamTitle: "NSPPD"
-            }
-          ];
-        }
+        const mergedVideos = [
+          ...liveStreams,
+          ...uniqueRecent,
+          ...NSPPD_FALLBACK_VIDEOS
+        ].slice(0, 10);
 
         if (!active) return;
         setVideos(mergedVideos);
@@ -309,17 +394,7 @@ function WatchPage() {
       } catch (error) {
         console.error("Unable to fetch watch videos:", error);
         if (active) {
-          setVideos([
-            {
-              videoId: "98g8-KXP_dU",
-              title: "NSPPD Previous Stream",
-              thumbnail:
-                "https://i.ytimg.com/vi/98g8-KXP_dU/hqdefault.jpg",
-              churchName: "NSPPD",
-              isLive: false,
-              streamTitle: "NSPPD"
-            }
-          ]);
+          setVideos(NSPPD_FALLBACK_VIDEOS.slice(0, 10));
         }
       } finally {
         if (active) setLoadingVideos(false);
@@ -705,9 +780,12 @@ function LiveViewer() {
           fetchBackendVideos("/sync-recent-streams")
         ]);
 
+        const nsppdLiveVideos = (liveVideos || []).filter(isNsppdVideo);
+        const nsppdRecentVideos = (recentVideos || []).filter(isNsppdVideo);
+
         // 1) Prefer NSPPD live stream
-        if (liveVideos && liveVideos.length > 0) {
-          const liveId = getVideoId(liveVideos[0]);
+        if (nsppdLiveVideos && nsppdLiveVideos.length > 0) {
+          const liveId = getVideoId(nsppdLiveVideos[0]);
           if (liveId) {
             setVideoId(liveId);
             setVideoSrc(getVideoEmbedUrl(liveId));
@@ -717,8 +795,8 @@ function LiveViewer() {
         }
 
         // 2) Fallback to latest NSPPD recent sermon
-        if (recentVideos && recentVideos.length > 0) {
-          const recentId = getVideoId(recentVideos[0]);
+        if (nsppdRecentVideos && nsppdRecentVideos.length > 0) {
+          const recentId = getVideoId(nsppdRecentVideos[0]);
           if (recentId) {
             setVideoId(recentId);
             setVideoSrc(getVideoEmbedUrl(recentId));
