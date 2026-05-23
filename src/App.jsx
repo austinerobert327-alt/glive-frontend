@@ -269,6 +269,7 @@ function WatchPage() {
         ];
 
         if (!active) return;
+        // Always set videos, even if merged is empty (will show "No videos" gracefully)
         setVideos(mergedVideos);
         setActiveHero(0);
       } catch (error) {
@@ -659,9 +660,8 @@ function LiveViewer() {
         ]);
 
         // 1) Prefer NSPPD live stream
-        if (liveVideos.length > 0) {
-          const liveVideo = liveVideos[0];
-          const liveId = getVideoId(liveVideo);
+        if (liveVideos && liveVideos.length > 0) {
+          const liveId = getVideoId(liveVideos[0]);
           if (liveId) {
             setVideoId(liveId);
             setVideoSrc(getVideoEmbedUrl(liveId));
@@ -671,7 +671,7 @@ function LiveViewer() {
         }
 
         // 2) Fallback to latest NSPPD recent sermon
-        if (recentVideos.length > 0) {
+        if (recentVideos && recentVideos.length > 0) {
           const recentId = getVideoId(recentVideos[0]);
           if (recentId) {
             setVideoId(recentId);
