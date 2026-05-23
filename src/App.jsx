@@ -255,21 +255,31 @@ function WatchPage() {
         const liveData = liveResponse.ok ? await liveResponse.json() : { streams: [] };
         const recentData = recentResponse.ok ? await recentResponse.json() : { streams: [] };
 
+        const liveStreams = (liveData.streams || []).map((video) => ({
+          ...video,
+          isLive: true,
+          streamTitle: "NSPPD"
+        }));
+
+        const recentStreams = (recentData.streams || []).map((video) => ({
+          ...video,
+          isLive: false,
+          streamTitle: "NSPPD"
+        }));
+
+        const liveVideoIds = new Set(
+          liveStreams.map((video) => getVideoId(video)).filter(Boolean)
+        );
+
         const mergedVideos = [
-          ...(liveData.streams || []).map((video) => ({
-            ...video,
-            isLive: true,
-            streamTitle: video.churchName
-          })),
-          ...(recentData.streams || []).map((video) => ({
-            ...video,
-            isLive: false,
-            streamTitle: video.churchName
-          }))
+          ...liveStreams,
+          ...recentStreams.filter((video) => {
+            const videoId = getVideoId(video);
+            return videoId && !liveVideoIds.has(videoId);
+          })
         ];
 
         if (!active) return;
-        // Always set videos, even if merged is empty (will show "No videos" gracefully)
         setVideos(mergedVideos);
         setActiveHero(0);
       } catch (error) {
