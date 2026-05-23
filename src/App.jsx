@@ -726,10 +726,10 @@ function LiveViewer() {
           fetchBackendVideos("/sync-recent-streams")
         ]);
 
-        const videos = [...liveVideos, ...recentVideos];
         const normalizedStreamKey = normalizeKey(stream.id || stream.title);
 
-        const matchedVideo = videos.find((video) => {
+        // 1) Prefer a live video for this church
+        const liveMatch = (liveVideos || []).find((video) => {
           const churchKey = normalizeKey(video.churchName || video.title || "");
           const vId = getVideoId(video);
 
@@ -744,25 +744,38 @@ function LiveViewer() {
           );
         });
 
-        const chosenVideoId = getVideoId(matchedVideo);
-        if (chosenVideoId) {
-          setVideoId(chosenVideoId);
-          setVideoSrc(getVideoEmbedUrl(chosenVideoId));
-        } else {
-          const fallbackRecent = recentVideos.find((video) => {
-            const churchKey = normalizeKey(video.churchName || "");
-            return churchKey.includes(normalizedStreamKey);
-          });
+        const liveId = getVideoId(liveMatch);
+        if (liveId) {
+          setVideoId(liveId);
+          setVideoSrc(getVideoEmbedUrl(liveId));
+          setLoadingVideo(false);
+          return;
+        }
 
-          const fallbackVideoId = getVideoId(fallbackRecent);
+        // 2) If not live, find the latest recent sermon for this church
+        const recentMatches = (recentVideos || []).filter((video) => {
+          const churchKey = normalizeKey(video.churchName || video.title || "");
+          return (
+            churchKey === normalizedStreamKey ||
+            churchKey.includes(normalizedStreamKey) ||
+            normalizedStreamKey.includes(churchKey)
+          );
+        });
 
-          if (fallbackVideoId) {
-            setVideoId(fallbackVideoId);
-            setVideoSrc(getVideoEmbedUrl(fallbackVideoId));
-          } else {
-            setVideoSrc(null);
+        if (recentMatches.length > 0) {
+          recentMatches.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+          const recentBest = recentMatches[0];
+          const recentId = getVideoId(recentBest);
+          if (recentId) {
+            setVideoId(recentId);
+            setVideoSrc(getVideoEmbedUrl(recentId));
+            setLoadingVideo(false);
+            return;
           }
         }
+
+        // 3) Nothing available
+        setVideoSrc(null);
       } catch (error) {
         console.error("Unable to fetch live video from backend:", error);
         setVideoSrc(null);
