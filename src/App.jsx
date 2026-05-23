@@ -28,54 +28,6 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 
 const NSPPD_CHANNEL_ID = "UCLg4NCAJxhIvD4IRV__LOFg";
-const PAYSTACK_KEY =
-  import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ||
-  import.meta.env.VITE_PAYSTACK_KEY ||
-  import.meta.env.VITE_PUBLIC_PAYSTACK_KEY ||
-  "pk_live_019365ea37124e26f8baec964658b07837520356";
-const BACKEND_URL = (
-  import.meta.env.VITE_BACKEND_URL ||
-  "https://glive-backend-1.onrender.com"
-).replace(/\/$/, "");
-const PAYSTACK_SCRIPT_SRC = "https://js.paystack.co/v1/inline.js";
-
-const streams = [
-  {
-    id: "nsppd",
-    title: "NSPPD",
-    channelId: NSPPD_CHANNEL_ID
-  },
-  {
-    id: "winners",
-    title: "Winners Chapel",
-    channelId: "UCyUKtrMdDilf74SPkCCKKtw"
-  },
-  {
-    id: "rccg",
-    title: "RCCG",
-    channelId: "UCHp4qCAPmz7-5BJ601FDFnA"
-  },
-  {
-    id: "dunamis",
-    title: "Dunamis",
-    channelId: "UC0pFEFO86OwhVUcqAQ4ICjQ"
-  },
-  {
-    id: "koinonia",
-    title: "Koinonia Global",
-    channelId: "UCq2ueL6wl7slTuInRbFpe7w"
-  },
-  {
-    id: "omega-fire",
-    title: "Omega Fire Ministry",
-    channelId: "UCrF3Zv8PGIT4R4f2LMQvQSQ"
-  },
-  {
-    id: "light-nation",
-    title: "Light Nation Church",
-    channelId: "UCgXEDFzk3TwStyRnlUJrMVA"
-  }
-];
 
 function loadPaystackScript() {
   if (window.PaystackPop) {
@@ -383,23 +335,6 @@ function WatchPage() {
           </section>
         )}
 
-        <section className="church-section">
-          <h2>Live Churches</h2>
-          <div className="church-scroll">
-            {streams.map((stream) => (
-              <button
-                type="button"
-                key={stream.id}
-                className="church-card"
-                onClick={() => navigate(`/live/stream/${stream.id}`)}
-              >
-                <span className="church-live-dot" aria-hidden="true" />
-                <span>{stream.title}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
         {videos.length > 0 && (
           <section className="recent-section">
             <h2>Recently Added</h2>
@@ -431,10 +366,7 @@ function WatchPage() {
 
 function LiveViewer() {
   const params = useParams();
-  const routeParam = params.videoId || params.id;
-  const matchedStream = streams.find((s) => String(s.id) === routeParam);
-  const routeVideoId = matchedStream ? null : routeParam;
-  const stream = matchedStream || streams[0];
+  const routeVideoId = params.videoId || null;
 
   const [videoId, setVideoId] = useState(null);
   const [videoSrc, setVideoSrc] = useState(null);
@@ -726,46 +658,21 @@ function LiveViewer() {
           fetchBackendVideos("/sync-recent-streams")
         ]);
 
-        const normalizedStreamKey = normalizeKey(stream.id || stream.title);
-
-        // 1) Prefer a live video for this church
-        const liveMatch = (liveVideos || []).find((video) => {
-          const churchKey = normalizeKey(video.churchName || video.title || "");
-          const vId = getVideoId(video);
-
-          if (vId && (normalizeKey(vId) === normalizedStreamKey || normalizedStreamKey === normalizeKey(vId))) {
-            return true;
+        // 1) Prefer NSPPD live stream
+        if (liveVideos.length > 0) {
+          const liveVideo = liveVideos[0];
+          const liveId = getVideoId(liveVideo);
+          if (liveId) {
+            setVideoId(liveId);
+            setVideoSrc(getVideoEmbedUrl(liveId));
+            setLoadingVideo(false);
+            return;
           }
-
-          return (
-            churchKey === normalizedStreamKey ||
-            churchKey.includes(normalizedStreamKey) ||
-            normalizedStreamKey.includes(churchKey)
-          );
-        });
-
-        const liveId = getVideoId(liveMatch);
-        if (liveId) {
-          setVideoId(liveId);
-          setVideoSrc(getVideoEmbedUrl(liveId));
-          setLoadingVideo(false);
-          return;
         }
 
-        // 2) If not live, find the latest recent sermon for this church
-        const recentMatches = (recentVideos || []).filter((video) => {
-          const churchKey = normalizeKey(video.churchName || video.title || "");
-          return (
-            churchKey === normalizedStreamKey ||
-            churchKey.includes(normalizedStreamKey) ||
-            normalizedStreamKey.includes(churchKey)
-          );
-        });
-
-        if (recentMatches.length > 0) {
-          recentMatches.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
-          const recentBest = recentMatches[0];
-          const recentId = getVideoId(recentBest);
+        // 2) Fallback to latest NSPPD recent sermon
+        if (recentVideos.length > 0) {
+          const recentId = getVideoId(recentVideos[0]);
           if (recentId) {
             setVideoId(recentId);
             setVideoSrc(getVideoEmbedUrl(recentId));
@@ -777,7 +684,7 @@ function LiveViewer() {
         // 3) Nothing available
         setVideoSrc(null);
       } catch (error) {
-        console.error("Unable to fetch live video from backend:", error);
+        console.error("Unable to fetch NSPPD video from backend:", error);
         setVideoSrc(null);
       } finally {
         setLoadingVideo(false);
@@ -785,7 +692,7 @@ function LiveViewer() {
     };
 
     fetchVideo();
-  }, [routeVideoId, stream]);
+  }, [routeVideoId]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -1028,7 +935,6 @@ export default function App() {
     <Routes>
       <Route path="/" element={<WatchPage />} />
       <Route path="/live/:videoId" element={<LiveViewer />} />
-      <Route path="/live/stream/:id" element={<LiveViewer />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
     </Routes>
