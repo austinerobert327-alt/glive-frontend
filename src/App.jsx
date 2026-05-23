@@ -179,7 +179,11 @@ async function fetchBackendVideos(path) {
     throw new Error(`Backend fetch failed: ${response.status} ${response.statusText}`);
   }
   const data = await response.json();
-  return Array.isArray(data) ? data : [];
+  // Backend may return { success: true, streams: [...] }
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.streams)) return data.streams;
+  if (data && Array.isArray(data.items)) return data.items;
+  return [];
 }
 
 function normalizeKey(value) {
@@ -293,39 +297,24 @@ function WatchPage() {
       setLoadingVideos(true);
 
       try {
-        const [liveVideos, recentVideos] = await Promise.all([
-          fetchBackendVideos("/live-streams"),
-          fetchBackendVideos("/sync-recent-streams")
-        ]);
+        const liveResponse = await fetch(`${BACKEND_URL}/live-streams`);
+        const recentResponse = await fetch(`${BACKEND_URL}/sync-recent-streams`);
 
-        const normalizedVideos = [
-          ...liveVideos.map((video) => ({
+        const liveData = liveResponse.ok ? await liveResponse.json() : { streams: [] };
+        const recentData = recentResponse.ok ? await recentResponse.json() : { streams: [] };
+
+        const mergedVideos = [
+          ...(liveData.streams || []).map((video) => ({
             ...video,
             isLive: true,
             streamTitle: video.churchName
           })),
-          ...recentVideos.map((video) => ({
+          ...(recentData.streams || []).map((video) => ({
             ...video,
             isLive: false,
             streamTitle: video.churchName
           }))
         ];
-
-        const uniqueVideos = new Map();
-        normalizedVideos.forEach((video) => {
-          const videoId = getVideoId(video);
-          if (videoId && !uniqueVideos.has(videoId)) {
-            uniqueVideos.set(videoId, video);
-          }
-        });
-
-        const mergedVideos = Array.from(uniqueVideos.values())
-          .sort((a, b) => {
-            const aDate = new Date(a.publishedAt || 0).getTime();
-            const bDate = new Date(b.publishedAt || 0).getTime();
-            return bDate - aDate;
-          })
-          .slice(0, 18);
 
         if (!active) return;
         setVideos(mergedVideos);
