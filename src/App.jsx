@@ -280,16 +280,47 @@ function WatchPage() {
           return videoId && !liveVideoIds.has(videoId);
         });
 
-        const mergedVideos = liveStreams.length > 0
-          ? [...liveStreams, ...uniqueRecent].slice(0, 11)
-          : uniqueRecent.slice(0, 10);
+        let mergedVideos = [];
+
+        if (liveStreams.length > 0) {
+          mergedVideos = [
+            ...liveStreams,
+            ...uniqueRecent
+          ];
+        } else if (uniqueRecent.length > 0) {
+          mergedVideos = uniqueRecent;
+        } else {
+          mergedVideos = [
+            {
+              videoId: "98g8-KXP_dU",
+              title: "NSPPD Previous Stream",
+              thumbnail:
+                "https://i.ytimg.com/vi/98g8-KXP_dU/hqdefault.jpg",
+              churchName: "NSPPD",
+              isLive: false,
+              streamTitle: "NSPPD"
+            }
+          ];
+        }
 
         if (!active) return;
         setVideos(mergedVideos);
         setActiveHero(0);
       } catch (error) {
         console.error("Unable to fetch watch videos:", error);
-        if (active) setVideos([]);
+        if (active) {
+          setVideos([
+            {
+              videoId: "98g8-KXP_dU",
+              title: "NSPPD Previous Stream",
+              thumbnail:
+                "https://i.ytimg.com/vi/98g8-KXP_dU/hqdefault.jpg",
+              churchName: "NSPPD",
+              isLive: false,
+              streamTitle: "NSPPD"
+            }
+          ]);
+        }
       } finally {
         if (active) setLoadingVideos(false);
       }
@@ -696,11 +727,15 @@ function LiveViewer() {
           }
         }
 
-        // 3) Nothing available
-        setVideoSrc(null);
+        // 3) Hard fallback video
+        const fallbackVideoId = "98g8-KXP_dU";
+        setVideoId(fallbackVideoId);
+        setVideoSrc(getVideoEmbedUrl(fallbackVideoId));
       } catch (error) {
         console.error("Unable to fetch NSPPD video from backend:", error);
-        setVideoSrc(null);
+        const fallbackVideoId = "98g8-KXP_dU";
+        setVideoId(fallbackVideoId);
+        setVideoSrc(getVideoEmbedUrl(fallbackVideoId));
       } finally {
         setLoadingVideo(false);
       }
