@@ -526,7 +526,7 @@ button {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 10px max(12px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   background: linear-gradient(to top, #000, rgba(0, 0, 0, 0));
 }
 
@@ -583,9 +583,12 @@ button {
 }
 
 .share-icon-btn {
+  flex: 0 0 42px;
+  flex-shrink: 0;
   display: grid;
   place-items: center;
   width: 42px;
+  min-width: 42px;
   height: 42px;
   border: none;
   border-radius: 50%;
@@ -628,6 +631,7 @@ button {
   justify-content: flex-end;
   flex: 0 0 auto;
   gap: 8px;
+  min-width: max-content;
 }
 
 .gift-btn,
@@ -1134,22 +1138,26 @@ button {
 @media (max-width: 430px) {
   .bottom-bar {
     gap: 6px;
-    padding-inline: 8px;
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
   }
 
   .action-row {
-    gap: 5px;
+    gap: 6px;
   }
 
   .gift-btn,
-  .hamburger-btn {
-    width: 34px;
-    height: 34px;
+  .hamburger-btn,
+  .share-icon-btn {
+    flex-basis: 36px;
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
   }
 
   .amen-btn,
   .share-btn {
-    height: 34px;
+    height: 36px;
     padding-inline: 8px;
     font-size: 12px;
   }

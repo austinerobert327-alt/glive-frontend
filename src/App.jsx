@@ -27,9 +27,11 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 
 const NSPPD_CHANNEL_ID = "UCLg4NCAJxhIvD4IRV__LOFg";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://glive-backend.onrender.com";
+const PAYSTACK_SCRIPT_SRC = "https://js.paystack.co/v2/inline.js";
 
 function loadPaystackScript() {
-  if (window.PaystackPop) {
+  if (window.PaystackPop?.resumeTransaction) {
     return Promise.resolve(window.PaystackPop);
   }
 
@@ -112,10 +114,41 @@ async function verifyPaymentOnBackend(reference, userId) {
   return data;
 }
 
-async function processRechargeVerification(reference, userId, fallbackRef, setIsRecharging) {
+async function initializeRechargeOnBackend(user, amount, reference) {
+  const response = await fetch(`${BACKEND_URL}/initialize-payment`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      email: user.email,
+      amount,
+      userId: user.uid,
+      reference
+    })
+  });
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok || !data?.success) {
+    throw new Error(data?.error?.message || data?.error || "Unable to initialize payment.");
+  }
+
+  return data;
+}
+
+async function processRechargeVerification(reference, userId, fallbackRef, setIsRecharging, setCoins) {
   try {
     const paymentRef = reference || fallbackRef;
-    await verifyPaymentOnBackend(paymentRef, userId);
+    const result = await verifyPaymentOnBackend(paymentRef, userId);
+    if (typeof result?.coins === "number") {
+      setCoins(result.coins);
+    }
   } catch (error) {
     console.error("Recharge verification failed:", error);
     alert(`Payment was completed, but wallet verification failed. Reference: ${reference || fallbackRef}`);
@@ -226,17 +259,8 @@ function isNsppdVideo(video) {
 
 const NSPPD_FALLBACK_VIDEOS = [
   {
-    videoId: "98g8-KXP_dU",
-    title: "NSPPD Previous Stream 1",
-    thumbnail: getVideoThumbnailUrl("98g8-KXP_dU"),
-    embedUrl: getVideoEmbedUrl("98g8-KXP_dU"),
-    churchName: "NSPPD",
-    isLive: false,
-    streamTitle: "NSPPD"
-  },
-  {
     videoId: "vW6VlXmwDs0",
-    title: "NSPPD Previous Stream 2",
+    title: "NSPPD Previous Stream 1",
     thumbnail: getVideoThumbnailUrl("vW6VlXmwDs0"),
     embedUrl: getVideoEmbedUrl("vW6VlXmwDs0"),
     churchName: "NSPPD",
@@ -245,7 +269,7 @@ const NSPPD_FALLBACK_VIDEOS = [
   },
   {
     videoId: "KaGNwVxojvQ",
-    title: "NSPPD Previous Stream 3",
+    title: "NSPPD Previous Stream 2",
     thumbnail: getVideoThumbnailUrl("KaGNwVxojvQ"),
     embedUrl: getVideoEmbedUrl("KaGNwVxojvQ"),
     churchName: "NSPPD",
@@ -254,7 +278,7 @@ const NSPPD_FALLBACK_VIDEOS = [
   },
   {
     videoId: "YuMknWruBRo",
-    title: "NSPPD Previous Stream 4",
+    title: "NSPPD Previous Stream 3",
     thumbnail: getVideoThumbnailUrl("YuMknWruBRo"),
     embedUrl: getVideoEmbedUrl("YuMknWruBRo"),
     churchName: "NSPPD",
@@ -263,7 +287,7 @@ const NSPPD_FALLBACK_VIDEOS = [
   },
   {
     videoId: "knu8shzz4Hg",
-    title: "NSPPD Previous Stream 5",
+    title: "NSPPD Previous Stream 4",
     thumbnail: getVideoThumbnailUrl("knu8shzz4Hg"),
     embedUrl: getVideoEmbedUrl("knu8shzz4Hg"),
     churchName: "NSPPD",
@@ -272,7 +296,7 @@ const NSPPD_FALLBACK_VIDEOS = [
   },
   {
     videoId: "VLnTfhYpUuI",
-    title: "NSPPD Previous Stream 6",
+    title: "NSPPD Previous Stream 5",
     thumbnail: getVideoThumbnailUrl("VLnTfhYpUuI"),
     embedUrl: getVideoEmbedUrl("VLnTfhYpUuI"),
     churchName: "NSPPD",
@@ -281,7 +305,7 @@ const NSPPD_FALLBACK_VIDEOS = [
   },
   {
     videoId: "YAeHodqjz30",
-    title: "NSPPD Previous Stream 7",
+    title: "NSPPD Previous Stream 6",
     thumbnail: getVideoThumbnailUrl("YAeHodqjz30"),
     embedUrl: getVideoEmbedUrl("YAeHodqjz30"),
     churchName: "NSPPD",
@@ -290,7 +314,7 @@ const NSPPD_FALLBACK_VIDEOS = [
   },
   {
     videoId: "q7BtnCL3PS8",
-    title: "NSPPD Previous Stream 8",
+    title: "NSPPD Previous Stream 7",
     thumbnail: getVideoThumbnailUrl("q7BtnCL3PS8"),
     embedUrl: getVideoEmbedUrl("q7BtnCL3PS8"),
     churchName: "NSPPD",
@@ -299,7 +323,7 @@ const NSPPD_FALLBACK_VIDEOS = [
   },
   {
     videoId: "qsebg7XQpBQ",
-    title: "NSPPD Previous Stream 9",
+    title: "NSPPD Previous Stream 8",
     thumbnail: getVideoThumbnailUrl("qsebg7XQpBQ"),
     embedUrl: getVideoEmbedUrl("qsebg7XQpBQ"),
     churchName: "NSPPD",
@@ -308,9 +332,18 @@ const NSPPD_FALLBACK_VIDEOS = [
   },
   {
     videoId: "Lu_eXP8Jz_c",
-    title: "NSPPD Previous Stream 10",
+    title: "NSPPD Previous Stream 9",
     thumbnail: getVideoThumbnailUrl("Lu_eXP8Jz_c"),
     embedUrl: getVideoEmbedUrl("Lu_eXP8Jz_c"),
+    churchName: "NSPPD",
+    isLive: false,
+    streamTitle: "NSPPD"
+  },
+  {
+    videoId: "bmIQuDBarxU",
+    title: "NSPPD Previous Stream 10",
+    thumbnail: getVideoThumbnailUrl("bmIQuDBarxU"),
+    embedUrl: getVideoEmbedUrl("bmIQuDBarxU"),
     churchName: "NSPPD",
     isLive: false,
     streamTitle: "NSPPD"
@@ -337,16 +370,21 @@ function BottomSheet({ open, children, className = "" }) {
   );
 }
 
-function WatchFooter({ onLogout }) {
+function WatchFooter({ user, onLogin, onLogout }) {
   return (
     <footer className="watch-footer">
-      <button type="button" onClick={onLogout}>Logout</button>
+      {user ? (
+        <button type="button" onClick={onLogout}>Logout</button>
+      ) : (
+        <button type="button" onClick={onLogin}>Login</button>
+      )}
     </footer>
   );
 }
 
 function WatchPage() {
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
   const [videos, setVideos] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
   const [activeHero, setActiveHero] = useState(0);
@@ -358,10 +396,18 @@ function WatchPage() {
     await signOut(auth);
   };
 
+  const handleLogin = () => {
+    navigate("/login");
+  };
+
   const openVideo = (video) => {
     const videoId = getVideoId(video);
     if (videoId) navigate(`/live/${videoId}`);
   };
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, (u) => setUser(u));
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -379,14 +425,17 @@ function WatchPage() {
         const liveStreams = (liveData.streams || [])
           .map((video) => ({
             ...video,
-            isLive: true
+            isLive: true,
+            streamTitle: video.streamTitle || "NSPPD"
           }))
-          .filter(isNsppdVideo);
+          .filter((video) => getVideoId(video) && isNsppdVideo(video))
+          .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
 
         const recentStreams = (recentData.streams || [])
           .map((video) => ({
             ...video,
-            isLive: false
+            isLive: false,
+            streamTitle: video.streamTitle || "NSPPD"
           }))
           .filter(isNsppdVideo);
 
@@ -403,11 +452,17 @@ function WatchPage() {
           return videoId && !liveVideoIds.has(videoId);
         });
 
+        const seenVideoIds = new Set();
         const mergedVideos = [
           ...liveStreams,
           ...uniqueRecent,
           ...NSPPD_FALLBACK_VIDEOS
-        ].slice(0, 10);
+        ].filter((video) => {
+          const videoId = getVideoId(video);
+          if (!videoId || seenVideoIds.has(videoId) || !isNsppdVideo(video)) return false;
+          seenVideoIds.add(videoId);
+          return true;
+        }).slice(0, 10);
 
         if (!active) return;
         setVideos(mergedVideos);
@@ -502,7 +557,7 @@ function WatchPage() {
         )}
       </main>
 
-      <WatchFooter onLogout={handleLogout} />
+      <WatchFooter user={user} onLogin={handleLogin} onLogout={handleLogout} />
     </div>
   );
 }
@@ -510,7 +565,7 @@ function WatchPage() {
 function LiveViewer() {
   const params = useParams();
   const routeVideoId = params.videoId || null;
-  const fallbackVideoId = "98g8-KXP_dU";
+  const fallbackVideoId = "vW6VlXmwDs0";
   const fallbackVideoSrc = `https://www.youtube.com/embed/${fallbackVideoId}?autoplay=1&playsinline=1`;
   const stream = { title: "NSPPD" };
 
@@ -606,10 +661,6 @@ function LiveViewer() {
   const recharge = () => {
     requireLogin(async () => {
       if (isRecharging) return;
-      if (!PAYSTACK_KEY) {
-        alert("Paystack public key is missing. Add VITE_PAYSTACK_PUBLIC_KEY to the frontend environment and redeploy.");
-        return;
-      }
 
       const rechargeAmount = 1000;
       const txRef = "GLIVE_" + Date.now();
@@ -617,30 +668,55 @@ function LiveViewer() {
       setIsRecharging(true);
 
       try {
+        const paymentInit = await initializeRechargeOnBackend(user, rechargeAmount, txRef);
+        const accessCode = paymentInit?.accessCode || paymentInit?.data?.access_code;
+        const initializedRef = paymentInit?.reference || paymentInit?.data?.reference || txRef;
         const PaystackPop = await loadPaystackScript();
         const handlePaystackSuccess = function (response) {
-          processRechargeVerification(response?.reference, user.uid, txRef, setIsRecharging);
+          processRechargeVerification(
+            response?.reference || response?.trxref || initializedRef,
+            user.uid,
+            initializedRef,
+            setIsRecharging,
+            setCoins
+          );
         };
 
         const handlePaystackClose = function () {
           setIsRecharging(false);
         };
 
-        const handler = PaystackPop.setup({
-          key: PAYSTACK_KEY,
-          email: user.email,
-          amount: rechargeAmount * 100,
-          ref: txRef,
-          currency: "NGN",
-          metadata: {
-            userId: user.uid,
-            email: user.email
-          },
-          callback: handlePaystackSuccess,
-          onClose: handlePaystackClose
-        });
+        if (PaystackPop?.resumeTransaction && accessCode) {
+          PaystackPop.resumeTransaction(accessCode, {
+            onSuccess: handlePaystackSuccess,
+            onCancel: handlePaystackClose,
+            onError: (error) => {
+              console.error("Paystack popup error:", error);
+              setIsRecharging(false);
+            }
+          });
+          return;
+        }
 
-        handler.openIframe();
+        const paystack = typeof PaystackPop === "function" ? new PaystackPop() : null;
+        if (paystack?.resumeTransaction && accessCode) {
+          paystack.resumeTransaction(accessCode, {
+            onSuccess: handlePaystackSuccess,
+            onCancel: handlePaystackClose,
+            onError: (error) => {
+              console.error("Paystack popup error:", error);
+              setIsRecharging(false);
+            }
+          });
+          return;
+        }
+
+        if (paymentInit?.authorizationUrl) {
+          window.location.href = paymentInit.authorizationUrl;
+          return;
+        }
+
+        throw new Error("Paystack checkout could not be opened.");
       } catch (error) {
         console.error("Unable to launch Paystack:", error);
         alert(error?.message || "Payment service is not available right now.");
