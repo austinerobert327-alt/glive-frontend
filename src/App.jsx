@@ -27,7 +27,11 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 
 const NSPPD_CHANNEL_ID = "UCLg4NCAJxhIvD4IRV__LOFg";
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://glive-backend.onrender.com";
+const DEPLOYED_BACKEND_URL = "https://glive-backend-1.onrender.com";
+const configuredBackendUrl = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_URL = configuredBackendUrl && !configuredBackendUrl.includes("localhost")
+  ? configuredBackendUrl
+  : DEPLOYED_BACKEND_URL;
 const PAYSTACK_SCRIPT_SRC = "https://js.paystack.co/v2/inline.js";
 
 function loadPaystackScript() {
@@ -136,6 +140,11 @@ async function initializeRechargeOnBackend(user, amount, reference) {
   }
 
   if (!response.ok || !data?.success) {
+    console.error("Payment initialization failed:", {
+      status: response.status,
+      backendUrl: BACKEND_URL,
+      data
+    });
     throw new Error(data?.error?.message || data?.error || "Unable to initialize payment.");
   }
 
@@ -671,6 +680,10 @@ function LiveViewer() {
         const paymentInit = await initializeRechargeOnBackend(user, rechargeAmount, txRef);
         const accessCode = paymentInit?.accessCode || paymentInit?.data?.access_code;
         const initializedRef = paymentInit?.reference || paymentInit?.data?.reference || txRef;
+        const authorizationUrl =
+          paymentInit?.authorization_url ||
+          paymentInit?.authorizationUrl ||
+          paymentInit?.data?.authorization_url;
         const PaystackPop = await loadPaystackScript();
         const handlePaystackSuccess = function (response) {
           processRechargeVerification(
@@ -711,8 +724,8 @@ function LiveViewer() {
           return;
         }
 
-        if (paymentInit?.authorizationUrl) {
-          window.location.href = paymentInit.authorizationUrl;
+        if (authorizationUrl) {
+          window.location.href = authorizationUrl;
           return;
         }
 
