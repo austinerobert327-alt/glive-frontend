@@ -533,10 +533,11 @@ button {
 .input-box {
   display: flex;
   align-items: center;
+  gap: 8px;
   flex: 1 1 auto;
   min-width: 0;
-  height: 34px;
-  padding: 0 3px 0 12px;
+  height: 42px;
+  padding: 0 4px 0 12px;
   border-radius: 999px;
   background: #1f1f1f;
 }
@@ -558,11 +559,13 @@ button {
 }
 
 .send-btn {
-  flex: 0 0 auto;
+  flex: 0 0 36px;
+  flex-shrink: 0;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
   padding: 0;
   border: none;
   border-radius: 50%;
@@ -1156,7 +1159,9 @@ button {
   }
 
   .send-btn {
-    width: 26px;
-    height: 26px;
+    flex-basis: 34px;
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
   }
 }

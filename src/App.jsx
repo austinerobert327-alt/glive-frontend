@@ -208,6 +208,15 @@ function isNsppdVideo(video) {
   const churchName = video.churchName;
   const channelTitle = video.channelTitle || video?.snippet?.channelTitle;
   const title = video.title || video?.snippet?.title;
+  const combinedText = normalizeText(`${churchName} ${channelTitle} ${title}`);
+
+  if (
+    combinedText.includes("koinonia") ||
+    combinedText.includes("joshua selman") ||
+    combinedText.includes("apostle selman")
+  ) {
+    return false;
+  }
 
   return (
     churchName === "NSPPD" ||
