@@ -150,6 +150,10 @@ function getVideoEmbedUrl(videoId) {
   return `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1`;
 }
 
+function getVideoThumbnailUrl(videoId) {
+  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+}
+
 function getFullscreenElement() {
   return document.fullscreenElement || document.webkitFullscreenElement || null;
 }
@@ -216,79 +220,89 @@ const NSPPD_FALLBACK_VIDEOS = [
   {
     videoId: "98g8-KXP_dU",
     title: "NSPPD Previous Stream 1",
-    thumbnail: "https://i.ytimg.com/vi/98g8-KXP_dU/hqdefault.jpg",
+    thumbnail: getVideoThumbnailUrl("98g8-KXP_dU"),
+    embedUrl: getVideoEmbedUrl("98g8-KXP_dU"),
     churchName: "NSPPD",
     isLive: false,
     streamTitle: "NSPPD"
   },
   {
-    videoId: "7ot8l0",
+    videoId: "vW6VlXmwDs0",
     title: "NSPPD Previous Stream 2",
-    thumbnail: "https://i.ytimg.com/vi/7ot8l0/hqdefault.jpg",
+    thumbnail: getVideoThumbnailUrl("vW6VlXmwDs0"),
+    embedUrl: getVideoEmbedUrl("vW6VlXmwDs0"),
     churchName: "NSPPD",
     isLive: false,
     streamTitle: "NSPPD"
   },
   {
-    videoId: "dn91oo",
+    videoId: "KaGNwVxojvQ",
     title: "NSPPD Previous Stream 3",
-    thumbnail: "https://i.ytimg.com/vi/dn91oo/hqdefault.jpg",
+    thumbnail: getVideoThumbnailUrl("KaGNwVxojvQ"),
+    embedUrl: getVideoEmbedUrl("KaGNwVxojvQ"),
     churchName: "NSPPD",
     isLive: false,
     streamTitle: "NSPPD"
   },
   {
-    videoId: "s9c3iq",
+    videoId: "YuMknWruBRo",
     title: "NSPPD Previous Stream 4",
-    thumbnail: "https://i.ytimg.com/vi/s9c3iq/hqdefault.jpg",
+    thumbnail: getVideoThumbnailUrl("YuMknWruBRo"),
+    embedUrl: getVideoEmbedUrl("YuMknWruBRo"),
     churchName: "NSPPD",
     isLive: false,
     streamTitle: "NSPPD"
   },
   {
-    videoId: "x1y2z3a",
+    videoId: "knu8shzz4Hg",
     title: "NSPPD Previous Stream 5",
-    thumbnail: "https://i.ytimg.com/vi/x1y2z3a/hqdefault.jpg",
+    thumbnail: getVideoThumbnailUrl("knu8shzz4Hg"),
+    embedUrl: getVideoEmbedUrl("knu8shzz4Hg"),
     churchName: "NSPPD",
     isLive: false,
     streamTitle: "NSPPD"
   },
   {
-    videoId: "b4c5d6e",
+    videoId: "VLnTfhYpUuI",
     title: "NSPPD Previous Stream 6",
-    thumbnail: "https://i.ytimg.com/vi/b4c5d6e/hqdefault.jpg",
+    thumbnail: getVideoThumbnailUrl("VLnTfhYpUuI"),
+    embedUrl: getVideoEmbedUrl("VLnTfhYpUuI"),
     churchName: "NSPPD",
     isLive: false,
     streamTitle: "NSPPD"
   },
   {
-    videoId: "f7g8h9i",
+    videoId: "YAeHodqjz30",
     title: "NSPPD Previous Stream 7",
-    thumbnail: "https://i.ytimg.com/vi/f7g8h9i/hqdefault.jpg",
+    thumbnail: getVideoThumbnailUrl("YAeHodqjz30"),
+    embedUrl: getVideoEmbedUrl("YAeHodqjz30"),
     churchName: "NSPPD",
     isLive: false,
     streamTitle: "NSPPD"
   },
   {
-    videoId: "j0k1l2m",
+    videoId: "q7BtnCL3PS8",
     title: "NSPPD Previous Stream 8",
-    thumbnail: "https://i.ytimg.com/vi/j0k1l2m/hqdefault.jpg",
+    thumbnail: getVideoThumbnailUrl("q7BtnCL3PS8"),
+    embedUrl: getVideoEmbedUrl("q7BtnCL3PS8"),
     churchName: "NSPPD",
     isLive: false,
     streamTitle: "NSPPD"
   },
   {
-    videoId: "n3o4p5q",
+    videoId: "qsebg7XQpBQ",
     title: "NSPPD Previous Stream 9",
-    thumbnail: "https://i.ytimg.com/vi/n3o4p5q/hqdefault.jpg",
+    thumbnail: getVideoThumbnailUrl("qsebg7XQpBQ"),
+    embedUrl: getVideoEmbedUrl("qsebg7XQpBQ"),
     churchName: "NSPPD",
     isLive: false,
     streamTitle: "NSPPD"
   },
   {
-    videoId: "r6s7t8u",
+    videoId: "Lu_eXP8Jz_c",
     title: "NSPPD Previous Stream 10",
-    thumbnail: "https://i.ytimg.com/vi/r6s7t8u/hqdefault.jpg",
+    thumbnail: getVideoThumbnailUrl("Lu_eXP8Jz_c"),
+    embedUrl: getVideoEmbedUrl("Lu_eXP8Jz_c"),
     churchName: "NSPPD",
     isLive: false,
     streamTitle: "NSPPD"
@@ -489,9 +503,12 @@ function WatchPage() {
 function LiveViewer() {
   const params = useParams();
   const routeVideoId = params.videoId || null;
+  const fallbackVideoId = "98g8-KXP_dU";
+  const fallbackVideoSrc = `https://www.youtube.com/embed/${fallbackVideoId}?autoplay=1&playsinline=1`;
+  const stream = { title: "NSPPD" };
 
-  const [videoId, setVideoId] = useState(null);
-  const [videoSrc, setVideoSrc] = useState(null);
+  const [videoId, setVideoId] = useState(fallbackVideoId);
+  const [videoSrc, setVideoSrc] = useState(fallbackVideoSrc);
   const [loadingVideo, setLoadingVideo] = useState(true);
 
   const [user, setUser] = useState(null);
@@ -762,10 +779,15 @@ function LiveViewer() {
   }, [comments]);
 
   useEffect(() => {
+    const setFallbackVideo = () => {
+      setVideoId(fallbackVideoId);
+      setVideoSrc(
+        `https://www.youtube.com/embed/${fallbackVideoId}?autoplay=1&playsinline=1`
+      );
+    };
+
     const fetchVideo = async () => {
       setLoadingVideo(true);
-      setVideoId(null);
-      setVideoSrc(null);
 
       if (routeVideoId) {
         setVideoId(routeVideoId);
@@ -806,21 +828,26 @@ function LiveViewer() {
         }
 
         // 3) Hard fallback video
-        const fallbackVideoId = "98g8-KXP_dU";
-        setVideoId(fallbackVideoId);
-        setVideoSrc(getVideoEmbedUrl(fallbackVideoId));
+        setFallbackVideo();
       } catch (error) {
         console.error("Unable to fetch NSPPD video from backend:", error);
-        const fallbackVideoId = "98g8-KXP_dU";
-        setVideoId(fallbackVideoId);
-        setVideoSrc(getVideoEmbedUrl(fallbackVideoId));
+        setFallbackVideo();
       } finally {
         setLoadingVideo(false);
       }
     };
 
     fetchVideo();
-  }, [routeVideoId]);
+  }, [routeVideoId, fallbackVideoSrc]);
+
+  useEffect(() => {
+    if (!videoId || !videoSrc) {
+      setVideoId(fallbackVideoId);
+      setVideoSrc(
+        `https://www.youtube.com/embed/${fallbackVideoId}?autoplay=1&playsinline=1`
+      );
+    }
+  }, [videoId, videoSrc]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -865,23 +892,18 @@ function LiveViewer() {
       )}
 
       <div className="video-container" ref={videoFrameRef}>
-        {loadingVideo ? (
-          <div className="no-video">Loading...</div>
-        ) : videoSrc ? (
-          <iframe
-            title={videoId ? `${stream.title} video ${videoId}` : `${stream.title} live stream`}
-            src={videoSrc}
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
-          />
-        ) : (
-          <div className="no-video">Live not available</div>
-        )}
-        {videoSrc && (
-          <button className="video-expand-btn" type="button" onClick={expandVideo} aria-label="Expand video">
-            <span />
-          </button>
-        )}
+        <iframe
+          title="NSPPD Stream"
+          src={videoSrc || fallbackVideoSrc}
+          width="100%"
+          height="100%"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+        />
+        {loadingVideo && <div className="no-video">Loading...</div>}
+        <button className="video-expand-btn" type="button" onClick={expandVideo} aria-label="Expand video">
+          <span />
+        </button>
       </div>
 
       <div className="top-right">
