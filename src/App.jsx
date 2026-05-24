@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Routes, Route, useNavigate, useParams } from "react-router-dom";
 import "./App.css";
 
-import { db } from "./firebase";
+import { auth, authPersistenceReady, db } from "./firebase";
 import {
   collection,
   addDoc,
@@ -17,7 +17,6 @@ import {
 } from "firebase/firestore";
 
 import {
-  getAuth,
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
@@ -348,7 +347,6 @@ function WatchFooter({ onLogout }) {
 
 function WatchPage() {
   const navigate = useNavigate();
-  const auth = getAuth();
   const [videos, setVideos] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
   const [activeHero, setActiveHero] = useState(0);
@@ -545,7 +543,6 @@ function LiveViewer() {
   const [sessionStart] = useState(Date.now());
 
   useEffect(() => {
-    const auth = getAuth();
     return onAuthStateChanged(auth, (u) => setUser(u));
   }, []);
 
@@ -560,18 +557,27 @@ function LiveViewer() {
 
   const handleGoogleLogin = async () => {
     try {
-      const auth = getAuth();
+      await authPersistenceReady;
       const provider = new GoogleAuthProvider();
-      const res = await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
 
-      await setDoc(doc(db, "users", res.user.uid), {
-        email: res.user.email,
-        coins: 0
-      }, { merge: true });
+      if (!result?.user) {
+        throw new Error("Google login completed without a user.");
+      }
 
+      setUser(result.user);
       setShowLogin(false);
-    } catch {
-      alert("Login failed");
+
+      try {
+        await setDoc(doc(db, "users", result.user.uid), {
+          email: result.user.email,
+          coins: 0
+        }, { merge: true });
+      } catch (walletError) {
+        console.error("Unable to sync user wallet after Google login:", walletError);
+      }
+    } catch (error) {
+      console.error("Google login error:", error);
     }
   };
 
@@ -717,7 +723,6 @@ function LiveViewer() {
   };
 
   const handleLogout = async () => {
-    const auth = getAuth();
     await signOut(auth);
   };
 

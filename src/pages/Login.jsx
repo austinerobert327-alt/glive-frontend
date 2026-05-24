@@ -1,13 +1,12 @@
 import { useState } from "react";
 import {
-    getAuth,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
     GoogleAuthProvider,
     signInWithPopup
 } from "firebase/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { db } from "../firebase";
+import { auth, authPersistenceReady, db } from "../firebase";
 import { doc, setDoc } from "firebase/firestore";
 
 function Login() {
@@ -17,7 +16,6 @@ function Login() {
     const [errorMsg, setErrorMsg] = useState("");
 
     const navigate = useNavigate();
-    const auth = getAuth();
 
     /* 🔥 EMAIL LOGIN (SMART: login OR register) */
     const handleLogin = async () => {
@@ -68,17 +66,27 @@ function Login() {
 
         try {
 
+            await authPersistenceReady;
+
             const provider = new GoogleAuthProvider();
 
             const result = await signInWithPopup(auth, provider);
 
-            await ensureUserWallet(result.user);
+            if (!result?.user) {
+                throw new Error("Google login completed without a user.");
+            }
+
+            try {
+                await ensureUserWallet(result.user);
+            } catch (walletError) {
+                console.error("Unable to sync user wallet after Google login:", walletError);
+            }
 
             navigate("/");
 
         } catch (err) {
-            console.log(err);
-            setErrorMsg("Google login failed");
+            console.error("Google login error:", err);
+            setErrorMsg("");
         }
 
     };
