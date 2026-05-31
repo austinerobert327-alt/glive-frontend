@@ -590,6 +590,7 @@ function LiveViewer() {
   const [amens, setAmens] = useState([]);
   const [showGift, setShowGift] = useState(false);
   const [giftAnim, setGiftAnim] = useState(null);
+  const [rechargeValue, setRechargeValue] = useState("");
   const [viewers, setViewers] = useState(10000);
   const [isRecharging, setIsRecharging] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -605,6 +606,8 @@ function LiveViewer() {
   const commentRef = useRef(null);
   const videoFrameRef = useRef(null);
   const [sessionStart] = useState(Date.now());
+
+  const RECHARGE_PRESETS = [500, 1000, 2500, 5000, 10000];
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => setUser(u));
@@ -671,7 +674,16 @@ function LiveViewer() {
     requireLogin(async () => {
       if (isRecharging) return;
 
-      const rechargeAmount = 1000;
+      // Use default or value from input
+      const value = Number(rechargeValue) || 1000;
+      const minAmount = 100; // minimum allowed amount in NGN
+
+      if (!Number.isFinite(value) || value < minAmount) {
+        alert(`Please enter a valid amount (minimum ₦${minAmount})`);
+        return;
+      }
+
+      const rechargeAmount = Math.floor(value);
       const txRef = "GLIVE_" + Date.now();
 
       setIsRecharging(true);
@@ -741,10 +753,31 @@ function LiveViewer() {
   const sendGift = async (cost, emoji) => {
     requireLogin(async () => {
       if (coins < cost) return recharge();
-
+      // Deduct coins from user wallet
       await setDoc(doc(db, "users", user.uid), {
         coins: increment(-cost)
       }, { merge: true });
+
+      // Publish gift event so all viewers see it
+      try {
+        await addDoc(collection(db, "gifts"), {
+          userId: user.uid,
+          username: user.email,
+          cost,
+          emoji,
+          createdAt: serverTimestamp(),
+          videoId,
+        });
+
+        // Also add a comment entry so it appears in the live comment feed
+        await addDoc(collection(db, "comments"), {
+          text: `${user.email || 'Anonymous'} sent ${cost} Diamonds`,
+          username: user.email,
+          createdAt: serverTimestamp()
+        });
+      } catch (err) {
+        console.error('Unable to publish gift event:', err);
+      }
 
       setGiftAnim(emoji);
       setTimeout(() => setGiftAnim(null), 1500);
@@ -994,7 +1027,7 @@ function LiveViewer() {
         </div>
       )}
 
-      <div className="video-container" ref={videoFrameRef}>
+      <div className="video-container" ref={videoFrameRef} onClick={() => { if (!showGift) setShowGift(true); }} onTouchEnd={() => { if (!showGift) setShowGift(true); }}>
         <iframe
           title="NSPPD Stream"
           src={videoSrc || fallbackVideoSrc}
@@ -1084,9 +1117,21 @@ function LiveViewer() {
       <BottomSheet open={showGift} className="gift-modal">
         <div className="gift-balance">
           <span>Balance: {coins}</span>
-          <button type="button" onClick={recharge} disabled={isRecharging}>
-            {isRecharging ? "Loading..." : "Recharge"}
-          </button>
+          <div className="recharge-controls">
+            {RECHARGE_PRESETS.map((p) => (
+              <button key={p} type="button" onClick={() => { setRechargeValue(String(p)); }}>
+                ₦{p}
+              </button>
+            ))}
+            <input
+              placeholder="Custom amount"
+              value={rechargeValue}
+              onChange={(e) => setRechargeValue(e.target.value.replace(/[^0-9]/g, ''))}
+            />
+            <button type="button" onClick={() => recharge()} disabled={isRecharging}>
+              {isRecharging ? "Loading..." : "Recharge"}
+            </button>
+          </div>
         </div>
         <div className="gift-grid">
           <button type="button" onClick={() => sendGift(5, "\uD83C\uDF81")}>{"\uD83C\uDF81"} 5</button>
@@ -1109,6 +1154,19 @@ function LiveViewer() {
           <button className="share-option tiktok-btn" type="button" onClick={shareToTikTok}>
             <span>🎵</span>
             TikTok
+          </button>
+          <button className="share-option copylink-btn" type="button" onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(window.location.href);
+              alert('Link copied to clipboard');
+            } catch (err) {
+              console.error('Unable to copy link:', err);
+              alert('Unable to copy link');
+            }
+            setShowShareSheet(false);
+          }}>
+            <span>🔗</span>
+            Copy Link
           </button>
         </div>
         <button className="close-btn" type="button" onClick={() => setShowShareSheet(false)}>
