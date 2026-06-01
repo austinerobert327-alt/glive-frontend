@@ -1162,28 +1162,33 @@ function LiveViewer() {
           <button type="button" onClick={() => handleGiftSelection(20, "\uD83D\uDC8E")}>{"\uD83D\uDC8E"} 20</button>
           <button type="button" onClick={() => handleGiftSelection(50, "\uD83C\uDFC6")}>{"\uD83C\uDFC6"} 50</button>
         </div>
-        <button className="close-btn" type="button" onClick={() => setShowGift(false)}>Close</button>
+        <button className="close-btn" type="button" onClick={() => {
+          setShowGift(false);
+          setShowRechargeSheet(false);
+        }}>Close</button>
       </BottomSheet>
 
-      <BottomSheet open={showRechargeSheet} className="recharge-sheet">
-        <div className="recharge-sheet-content">
-          {RECHARGE_PACKAGES.map((pkg) => (
-            <button
-              key={pkg.amount}
-              type="button"
-              className="share-option"
-              onClick={() => purchaseCoins(pkg.amount)}
-              disabled={isRecharging}
-            >
-              <span>💰</span>
-              {pkg.coins.toLocaleString()} Coins &nbsp; ₦{pkg.amount.toLocaleString()}
-            </button>
-          ))}
-        </div>
-        <button className="close-btn" type="button" onClick={() => setShowRechargeSheet(false)}>
-          Close
-        </button>
-      </BottomSheet>
+      {showRechargeSheet && (
+        <BottomSheet open={showRechargeSheet} className="recharge-sheet">
+          <div className="recharge-sheet-content">
+            {RECHARGE_PACKAGES.map((pkg) => (
+              <button
+                key={pkg.amount}
+                type="button"
+                className="share-option"
+                onClick={() => purchaseCoins(pkg.amount)}
+                disabled={isRecharging}
+              >
+                <span>💰</span>
+                {pkg.coins.toLocaleString()} Coins &nbsp; ₦{pkg.amount.toLocaleString()}
+              </button>
+            ))}
+          </div>
+          <button className="close-btn" type="button" onClick={() => setShowRechargeSheet(false)}>
+            Close
+          </button>
+        </BottomSheet>
+      )}
 
       <BottomSheet open={showShareSheet} className="share-sheet">
         <div className="share-sheet-content">
