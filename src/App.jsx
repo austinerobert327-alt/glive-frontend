@@ -184,11 +184,11 @@ function normalizeKey(value) {
 }
 
 function getLiveEmbedUrl(channelId) {
-  return `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&playsinline=1`;
+  return `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&playsinline=1&modestbranding=1&rel=0&iv_load_policy=3`;
 }
 
 function getVideoEmbedUrl(videoId) {
-  return `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1`;
+  return `https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&modestbranding=1&rel=0&iv_load_policy=3`;
 }
 
 function getVideoThumbnailUrl(videoId) {
@@ -575,7 +575,7 @@ function LiveViewer() {
   const params = useParams();
   const routeVideoId = params.videoId || null;
   const fallbackVideoId = "vW6VlXmwDs0";
-  const fallbackVideoSrc = `https://www.youtube.com/embed/${fallbackVideoId}?autoplay=1&playsinline=1`;
+  const fallbackVideoSrc = getVideoEmbedUrl(fallbackVideoId);
   const stream = { title: "NSPPD" };
 
   const [videoId, setVideoId] = useState(fallbackVideoId);
@@ -590,7 +590,8 @@ function LiveViewer() {
   const [amens, setAmens] = useState([]);
   const [showGift, setShowGift] = useState(false);
   const [giftAnim, setGiftAnim] = useState(null);
-  const [rechargeValue, setRechargeValue] = useState("");
+  const [isLive, setIsLive] = useState(false);
+  const [showRechargeSheet, setShowRechargeSheet] = useState(false);
   const [viewers, setViewers] = useState(10000);
   const [isRecharging, setIsRecharging] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -607,7 +608,13 @@ function LiveViewer() {
   const videoFrameRef = useRef(null);
   const [sessionStart] = useState(Date.now());
 
-  const RECHARGE_PRESETS = [500, 1000, 2500, 5000, 10000];
+  const RECHARGE_PACKAGES = [
+    { coins: 40, amount: 1000 },
+    { coins: 200, amount: 5000 },
+    { coins: 400, amount: 10000 },
+    { coins: 2000, amount: 50000 },
+    { coins: 4000, amount: 100000 }
+  ];
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => setUser(u));
@@ -670,23 +677,25 @@ function LiveViewer() {
     });
   };
 
-  const recharge = () => {
+  const purchaseCoins = (amount) => {
     requireLogin(async () => {
       if (isRecharging) return;
-
-      // Use default or value from input
-      const value = Number(rechargeValue) || 1000;
-      const minAmount = 100; // minimum allowed amount in NGN
-
-      if (!Number.isFinite(value) || value < minAmount) {
-        alert(`Please enter a valid amount (minimum ₦${minAmount})`);
+      if (!amount || amount <= 0) {
+        alert("Unable to process recharge. Please try again.");
         return;
       }
 
-      const rechargeAmount = Math.floor(value);
+      const minAmount = 100;
+      if (amount < minAmount) {
+        alert(`Please select a valid recharge package.`);
+        return;
+      }
+
+      const rechargeAmount = Math.floor(amount);
       const txRef = "GLIVE_" + Date.now();
 
       setIsRecharging(true);
+      setShowRechargeSheet(false);
 
       try {
         const paymentInit = await initializeRechargeOnBackend(user, rechargeAmount, txRef);
@@ -750,15 +759,35 @@ function LiveViewer() {
     });
   };
 
+  const handleGiftSelection = (cost, emoji) => {
+    if (!user) {
+      setShowLogin(true);
+      return;
+    }
+
+    if (coins < cost) {
+      setShowGift(false);
+      setShowRechargeSheet(true);
+      return;
+    }
+
+    sendGift(cost, emoji);
+  };
+
   const sendGift = async (cost, emoji) => {
     requireLogin(async () => {
-      if (coins < cost) return recharge();
-      // Deduct coins from user wallet
+      const displayName = user.displayName || user.email?.split("@")[0] || "Anonymous";
+      const giftNames = {
+        "🎁": "Gifts",
+        "💎": "Diamonds",
+        "🏆": "Trophies"
+      };
+      const label = giftNames[emoji] || "Gifts";
+
       await setDoc(doc(db, "users", user.uid), {
         coins: increment(-cost)
       }, { merge: true });
 
-      // Publish gift event so all viewers see it
       try {
         await addDoc(collection(db, "gifts"), {
           userId: user.uid,
@@ -769,9 +798,8 @@ function LiveViewer() {
           videoId,
         });
 
-        // Also add a comment entry so it appears in the live comment feed
         await addDoc(collection(db, "comments"), {
-          text: `${user.email || 'Anonymous'} sent ${cost} Diamonds`,
+          text: `${emoji} ${displayName} sent ${cost} ${label}`,
           username: user.email,
           createdAt: serverTimestamp()
         });
@@ -917,17 +945,25 @@ function LiveViewer() {
   useEffect(() => {
     const setFallbackVideo = () => {
       setVideoId(fallbackVideoId);
-      setVideoSrc(
-        `https://www.youtube.com/embed/${fallbackVideoId}?autoplay=1&playsinline=1`
-      );
+      setVideoSrc(getVideoEmbedUrl(fallbackVideoId));
+      setIsLive(false);
     };
 
     const fetchVideo = async () => {
       setLoadingVideo(true);
 
       if (routeVideoId) {
+        const [liveVideos, recentVideos] = await Promise.all([
+          fetchBackendVideos("/live-streams"),
+          fetchBackendVideos("/sync-recent-streams")
+        ]);
+
+        const nsppdLiveVideos = (liveVideos || []).filter(isNsppdVideo);
+        const isRouteLive = nsppdLiveVideos.some((video) => getVideoId(video) === routeVideoId);
+
         setVideoId(routeVideoId);
         setVideoSrc(getVideoEmbedUrl(routeVideoId));
+        setIsLive(isRouteLive);
         setLoadingVideo(false);
         return;
       }
@@ -947,6 +983,7 @@ function LiveViewer() {
           if (liveId) {
             setVideoId(liveId);
             setVideoSrc(getVideoEmbedUrl(liveId));
+            setIsLive(true);
             setLoadingVideo(false);
             return;
           }
@@ -958,6 +995,7 @@ function LiveViewer() {
           if (recentId) {
             setVideoId(recentId);
             setVideoSrc(getVideoEmbedUrl(recentId));
+            setIsLive(false);
             setLoadingVideo(false);
             return;
           }
@@ -979,9 +1017,8 @@ function LiveViewer() {
   useEffect(() => {
     if (!videoId || !videoSrc) {
       setVideoId(fallbackVideoId);
-      setVideoSrc(
-        `https://www.youtube.com/embed/${fallbackVideoId}?autoplay=1&playsinline=1`
-      );
+      setVideoSrc(getVideoEmbedUrl(fallbackVideoId));
+      setIsLive(false);
     }
   }, [videoId, videoSrc]);
 
@@ -1042,10 +1079,12 @@ function LiveViewer() {
         </button>
       </div>
 
-      <div className="top-right">
-        <span className="viewer-eye" aria-hidden="true" />
-        {viewers.toLocaleString()}
-      </div>
+      {isLive && (
+        <div className="top-right">
+          <span className="viewer-eye" aria-hidden="true" />
+          {viewers.toLocaleString()}
+        </div>
+      )}
 
       <div className="comment-overlay" ref={commentRef}>
         {comments.map((comment, index) => (
@@ -1116,29 +1155,34 @@ function LiveViewer() {
 
       <BottomSheet open={showGift} className="gift-modal">
         <div className="gift-balance">
-          <span>Balance: {coins}</span>
-          <div className="recharge-controls">
-            {RECHARGE_PRESETS.map((p) => (
-              <button key={p} type="button" onClick={() => { setRechargeValue(String(p)); }}>
-                ₦{p}
-              </button>
-            ))}
-            <input
-              placeholder="Custom amount"
-              value={rechargeValue}
-              onChange={(e) => setRechargeValue(e.target.value.replace(/[^0-9]/g, ''))}
-            />
-            <button type="button" onClick={() => recharge()} disabled={isRecharging}>
-              {isRecharging ? "Loading..." : "Recharge"}
-            </button>
-          </div>
+          <span>Balance: {coins} Coins</span>
         </div>
         <div className="gift-grid">
-          <button type="button" onClick={() => sendGift(5, "\uD83C\uDF81")}>{"\uD83C\uDF81"} 5</button>
-          <button type="button" onClick={() => sendGift(20, "\uD83D\uDC8E")}>{"\uD83D\uDC8E"} 20</button>
-          <button type="button" onClick={() => sendGift(50, "\uD83C\uDFC6")}>{"\uD83C\uDFC6"} 50</button>
+          <button type="button" onClick={() => handleGiftSelection(5, "\uD83C\uDF81")}>{"\uD83C\uDF81"} 5</button>
+          <button type="button" onClick={() => handleGiftSelection(20, "\uD83D\uDC8E")}>{"\uD83D\uDC8E"} 20</button>
+          <button type="button" onClick={() => handleGiftSelection(50, "\uD83C\uDFC6")}>{"\uD83C\uDFC6"} 50</button>
         </div>
         <button className="close-btn" type="button" onClick={() => setShowGift(false)}>Close</button>
+      </BottomSheet>
+
+      <BottomSheet open={showRechargeSheet} className="recharge-sheet">
+        <div className="recharge-sheet-content">
+          {RECHARGE_PACKAGES.map((pkg) => (
+            <button
+              key={pkg.amount}
+              type="button"
+              className="share-option"
+              onClick={() => purchaseCoins(pkg.amount)}
+              disabled={isRecharging}
+            >
+              <span>💰</span>
+              {pkg.coins.toLocaleString()} Coins &nbsp; ₦{pkg.amount.toLocaleString()}
+            </button>
+          ))}
+        </div>
+        <button className="close-btn" type="button" onClick={() => setShowRechargeSheet(false)}>
+          Close
+        </button>
       </BottomSheet>
 
       <BottomSheet open={showShareSheet} className="share-sheet">
