@@ -25,6 +25,7 @@ import {
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import GiftSupportPopup from "./components/GiftSupportPopup";
 
 const NSPPD_CHANNEL_ID = "UCLg4NCAJxhIvD4IRV__LOFg";
 const DEPLOYED_BACKEND_URL = "https://glive-backend-1.onrender.com";
@@ -590,6 +591,7 @@ function LiveViewer() {
   const [amens, setAmens] = useState([]);
   const [showGift, setShowGift] = useState(false);
   const [giftAnim, setGiftAnim] = useState(null);
+  const [showGiftSupportPopup, setShowGiftSupportPopup] = useState(false);
   const [isLive, setIsLive] = useState(false);
   const [showRechargeSheet, setShowRechargeSheet] = useState(false);
   const [viewers, setViewers] = useState(10000);
@@ -603,6 +605,12 @@ function LiveViewer() {
   const [prayerText, setPrayerText] = useState("");
   const [testimonyName, setTestimonyName] = useState("");
   const [testimonyText, setTestimonyText] = useState("");
+
+  const giftSupportTimerRef = useRef(null);
+  const giftSupportStateRef = useRef({ showGift: false, showRechargeSheet: false, showLogin: false });
+  const MIN_GIFT_COST = 5;
+  const GIFT_POPUP_INITIAL_DELAY = 25 * 60 * 1000;
+  const GIFT_POPUP_REPEAT_DELAY = 20 * 60 * 1000;
 
   const commentRef = useRef(null);
   const videoFrameRef = useRef(null);
@@ -911,6 +919,54 @@ function LiveViewer() {
     });
   };
 
+  const clearGiftSupportTimers = () => {
+    if (giftSupportTimerRef.current) {
+      clearTimeout(giftSupportTimerRef.current);
+      giftSupportTimerRef.current = null;
+    }
+  };
+
+  const scheduleGiftSupportPopup = (delay) => {
+    clearGiftSupportTimers();
+    giftSupportTimerRef.current = window.setTimeout(() => {
+      const current = giftSupportStateRef.current;
+      const overlayOpen = current.showGift || current.showRechargeSheet || current.showLogin;
+      if (overlayOpen) {
+        scheduleGiftSupportPopup(GIFT_POPUP_REPEAT_DELAY);
+        return;
+      }
+
+      setShowGiftSupportPopup(true);
+      scheduleGiftSupportPopup(GIFT_POPUP_REPEAT_DELAY);
+    }, delay);
+  };
+
+  useEffect(() => {
+    giftSupportStateRef.current = {
+      showGift,
+      showRechargeSheet,
+      showLogin
+    };
+  }, [showGift, showRechargeSheet, showLogin]);
+
+  useEffect(() => {
+    scheduleGiftSupportPopup(GIFT_POPUP_INITIAL_DELAY);
+    return () => clearGiftSupportTimers();
+  }, []);
+
+  const handleGiftSupportSendNow = () => {
+    setShowGiftSupportPopup(false);
+    if (coins >= MIN_GIFT_COST) {
+      setShowGift(true);
+    } else {
+      setShowRechargeSheet(true);
+    }
+  };
+
+  const handleGiftSupportIgnore = () => {
+    setShowGiftSupportPopup(false);
+  };
+
   useEffect(() => {
     const interval = setInterval(() => {
       setViewers((v) => v + Math.floor(Math.random() * 5));
@@ -1113,6 +1169,12 @@ function LiveViewer() {
           <i />
         </div>
       )}
+
+      <GiftSupportPopup
+        open={showGiftSupportPopup}
+        onSendNow={handleGiftSupportSendNow}
+        onIgnore={handleGiftSupportIgnore}
+      />
 
       {testimonies.length > 0 && (
         <div className="testimony-ticker">

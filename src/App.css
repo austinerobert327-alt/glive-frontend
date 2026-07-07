@@ -368,6 +368,84 @@ button {
   border-radius: 0;
 }
 
+.gift-support-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.gift-support-card {
+  width: min(480px, 100%);
+  max-width: 100%;
+  padding: 24px;
+  border-radius: 20px;
+  background: rgba(12, 12, 12, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  transform: scale(0.95);
+  opacity: 0;
+  animation: giftSupportFade 220ms ease-out forwards;
+}
+
+.gift-support-card h2 {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.gift-support-card p {
+  margin-bottom: 22px;
+  color: #d9d9d9;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+.gift-support-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.gift-support-primary,
+.gift-support-secondary {
+  flex: 1 1 120px;
+  min-width: 120px;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.gift-support-primary {
+  background: #26a65b;
+  color: #fff;
+}
+
+.gift-support-secondary {
+  background: #1b1b1b;
+  color: #d8d8d8;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@keyframes giftSupportFade {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .video-container:fullscreen,
 .video-container:-webkit-full-screen {
   height: 100vh;
